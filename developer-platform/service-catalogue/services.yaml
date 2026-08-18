@@ -1,0 +1,6 @@
+service: sample-service
+team: platform
+slack: "#platform"
+page: platform-oncall
+path: examples/sample-service
+slo: examples/sample-service/docs/SLO.md

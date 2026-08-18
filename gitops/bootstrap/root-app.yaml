@@ -1,0 +1,20 @@
+# Install Argo CD with the upstream manifest in a real cluster, then point
+# it at this repository. This file is the App of Apps root.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: platform-root
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/example/platform-engineering-reference.git
+    targetRevision: main
+    path: gitops/applications
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

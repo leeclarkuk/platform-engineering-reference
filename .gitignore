@@ -1,0 +1,62 @@
+# Local tooling
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars.local
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# Go
+bin/
+dist/
+coverage.out
+coverage.html
+*.test
+vendor/
+
+# Node (docs/tooling only)
+node_modules/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+
+# Secrets and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_ed25519
+credentials.json
+service-account*.json
+kubeconfig
+kubeconfig.*
+!.kubeconfig.example
+
+# Generated artefacts
+*.log
+tmp/
+.cache/
+out/
+
+# OS / editor
+Thumbs.db

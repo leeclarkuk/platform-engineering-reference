@@ -1,0 +1,51 @@
+version: '3'
+
+vars:
+  PROVIDER: ''
+  ENVIRONMENT: ''
+
+tasks:
+  default:
+    desc: List tasks
+    cmds:
+      - task --list
+
+  init:
+    desc: Install hooks and download Go modules
+    cmds:
+      - make init
+
+  lint:
+    desc: Run linters
+    cmds:
+      - make lint
+
+  test:
+    desc: Run tests
+    cmds:
+      - make test
+
+  validate:
+    desc: Validate Terraform, Helm and Kubernetes
+    cmds:
+      - make validate
+
+  security:
+    desc: Run security scanners
+    cmds:
+      - make security
+
+  build:
+    desc: Build CLI and sample service
+    cmds:
+      - make build
+
+  plan:
+    desc: Terraform plan. Requires PROVIDER and ENVIRONMENT.
+    cmds:
+      - make plan PROVIDER={{.PROVIDER}} ENVIRONMENT={{.ENVIRONMENT}}
+
+  clean:
+    desc: Remove build artefacts
+    cmds:
+      - make clean

@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sample-service-dev
+  namespace: sample-service
+data:
+  LOG_LEVEL: debug

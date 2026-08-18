@@ -1,0 +1,4 @@
+service: sample-service
+team: platform
+slack: "#platform"
+page: platform-oncall

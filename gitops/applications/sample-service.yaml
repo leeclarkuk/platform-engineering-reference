@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: sample-service
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/example/platform-engineering-reference.git
+    targetRevision: main
+    path: kubernetes/eks
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: sample-service
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

@@ -1,0 +1,5 @@
+compact: true
+framework:
+  - terraform
+download-external-modules: false
+soft-fail: false

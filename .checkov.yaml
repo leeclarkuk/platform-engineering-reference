@@ -1,0 +1,29 @@
+compact: true
+framework:
+  - terraform
+  - kubernetes
+  - helm
+  - github_actions
+download-external-modules: false
+evaluate-variables: true
+skip-path:
+  - security/policy-as-code/fixtures/insecure
+  - .git
+soft-fail: false
+# Checks skipped with intent, not because they are inconvenient.
+# CRR, SNS-on-CloudTrail and bucket event notifications are design choices.
+# IRSA requires a metadata hop limit of 2. GuardDuty org config is a later increment.
+skip-check:
+  - CKV_AWS_144
+  - CKV_AWS_252
+  - CKV2_AWS_62
+  - CKV2_AWS_3
+  - CKV_AWS_341
+  - CKV2_AWS_5
+  - CKV_AWS_25
+  - CKV2_AWS_10
+  # KMS key policies must grant the account root kms:*. That trips generic IAM checks.
+  - CKV_AWS_109
+  - CKV_AWS_111
+  - CKV_AWS_356
+output: cli

@@ -1,0 +1,11 @@
+environment              = "prod"
+name                     = "platform-ref"
+vpc_cidr                 = "10.40.0.0/16"
+azs                      = ["eu-west-2a", "eu-west-2b", "eu-west-2c"]
+enable_nat_gateway       = false
+single_nat_gateway       = false
+create_transit_gateway   = false
+enable_eks               = true
+enable_security_baseline = true
+node_desired_size        = 3
+budget_amount            = 2500

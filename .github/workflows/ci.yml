@@ -1,0 +1,147 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-docs:
+    name: Lint docs and YAML
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: markdownlint
+        run: npx --yes markdownlint-cli2 "**/*.md" "#.git" "#**/node_modules"
+      - name: yamllint
+        run: |
+          pip install --quiet yamllint
+          yamllint -c .yamllint.yml .
+
+  go:
+    name: Go test and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.x'
+          cache-dependency-path: |
+            examples/sample-service/go.sum
+            developer-platform/cli/go.sum
+      - name: Test sample service
+        run: go test ./...
+        working-directory: examples/sample-service
+      - name: Test CLI
+        run: go test ./...
+        working-directory: developer-platform/cli
+      - name: Build
+        run: |
+          mkdir -p bin
+          go -C examples/sample-service build -o bin/sample-service ./cmd/sample-service
+          go -C developer-platform/cli build -o bin/platform ./
+      - name: govulncheck
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck -C examples/sample-service ./...
+          govulncheck -C developer-platform/cli ./...
+
+  terraform:
+    name: Terraform fmt and validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.9.8'
+          terraform_wrapper: false
+      - name: Format
+        run: terraform fmt -check -recursive terraform landing-zones
+      - name: Validate providers
+        run: |
+          for dir in terraform/aws terraform/azure terraform/gcp landing-zones/aws; do
+            terraform -chdir="$dir" init -backend=false -input=false
+            terraform -chdir="$dir" validate
+          done
+
+  tflint:
+    name: TFLint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: v0.55.1
+      - name: Init plugins
+        run: tflint --init
+      - name: Lint AWS composition
+        run: tflint --chdir terraform/aws --recursive
+      - name: Lint modules
+        run: tflint --chdir terraform/modules --recursive
+
+  kubernetes:
+    name: Kubernetes and Helm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.16.4
+      - name: Helm lint
+        run: helm lint examples/sample-service/deploy/helm/sample-service
+      - name: kubeconform
+        run: |
+          curl -fsSL https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz | tar xz
+          ./kubeconform -strict -ignore-missing-schemas \
+            kubernetes/base \
+            kubernetes/eks \
+            kubernetes/aks \
+            kubernetes/gke \
+            gitops/applications \
+            gitops/bootstrap
+
+  security:
+    name: Security scanning
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Gitleaks
+        run: |
+          curl -fsSL https://github.com/gitleaks/gitleaks/releases/download/v8.24.3/gitleaks_8.24.3_linux_x64.tar.gz | tar xz
+          ./gitleaks detect --source . --verbose --redact
+      - name: Checkov
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          config_file: .checkov.yaml
+          directory: terraform
+      - name: Trivy filesystem
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+          ignore-unfixed: true
+      - name: Prove insecure fixtures fail
+        run: scripts/test-policy.sh
+
+  shell:
+    name: Shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: shellcheck
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq shellcheck
+          shellcheck -x scripts/*.sh

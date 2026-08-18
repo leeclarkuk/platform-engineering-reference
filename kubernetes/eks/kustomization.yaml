@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../base
+patches:
+  - target:
+      kind: ServiceAccount
+      name: sample-service
+    patch: |-
+      - op: add
+        path: /metadata/annotations
+        value:
+          eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/sample-service

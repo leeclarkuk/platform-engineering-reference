@@ -1,0 +1,20 @@
+# Example cost model inputs. Replace with contract rates. Not a quote.
+platform: platform-ref
+currency: USD
+period: monthly
+assumptions:
+  regions: 1
+  prod_clusters: 1
+  nonprod_clusters: 1
+  nat_gb: 500
+  log_ingest_gb: 80
+drivers:
+  eks_control_plane_usd: 73
+  node_hours_usd: 400
+  nat_usd: 120
+  logs_usd: 60
+  data_transfer_usd: 40
+  security_usd: 40
+notes: >
+  Totals are a sketch for conversation, not a budget submission.
+  Update after the first real invoice.
