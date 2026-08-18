@@ -23,7 +23,7 @@ kubernetes/gke           GKE WI, PDCSI
 * External Secrets Operator
 * kube-prometheus-stack or equivalent, plus OpenTelemetry collector
 * Admission policy (Kyverno or OPA Gatekeeper) for the checks CI might
-  miss: latest tags, missing limits, hostNetwork
+  miss: latest tags, missing limits, hostNetwork. **Planned.**
 
 Argo CD is the deployer. Helm is the package. Kustomize overlays adjust
 provider specifics.
@@ -32,7 +32,7 @@ provider specifics.
 
 | Cluster | Mechanism |
 | --- | --- |
-| EKS | IRSA (`eks.amazonaws.com/role-arn`) |
+| EKS | EKS Pod Identity (IRSA is the hatch) |
 | AKS | Azure Workload Identity (`azure.workload.identity/client-id`) |
 | GKE | Workload Identity (`iam.gke.io/gcp-service-account`) |
 
