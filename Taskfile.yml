@@ -41,9 +41,14 @@ tasks:
       - make build
 
   plan:
-    desc: Terraform plan. Requires PROVIDER and ENVIRONMENT.
+    desc: Terraform plan. Requires PROVIDER, ENVIRONMENT and optional STACK.
     cmds:
-      - make plan PROVIDER={{.PROVIDER}} ENVIRONMENT={{.ENVIRONMENT}}
+      - make plan PROVIDER={{.PROVIDER}} ENVIRONMENT={{.ENVIRONMENT}} STACK={{.STACK}}
+
+  verify-aws:
+    desc: Static AWS verification without cloud credentials
+    cmds:
+      - make verify-aws
 
   clean:
     desc: Remove build artefacts

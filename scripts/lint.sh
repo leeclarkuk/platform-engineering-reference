@@ -32,7 +32,7 @@ elif command -v npx >/dev/null 2>&1; then
 fi
 
 if command -v shellcheck >/dev/null 2>&1; then
-  shellcheck -x scripts/*.sh || fail=1
+  shellcheck -x scripts/*.sh scripts/aws/*.sh scripts/failure-lab/*.sh || fail=1
 fi
 
 if command -v helm >/dev/null 2>&1; then

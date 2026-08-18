@@ -10,7 +10,9 @@ if ! command -v terraform >/dev/null 2>&1; then
 fi
 
 roots=(
-  terraform/aws
+  terraform/aws/bootstrap
+  terraform/aws/network
+  terraform/aws/workload
   terraform/azure
   terraform/gcp
   landing-zones/aws

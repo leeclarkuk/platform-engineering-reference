@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Prove that policy-as-code rejects a known-bad fixture.
+# Prove that policy-as-code rejects known-bad fixtures.
 # Scan copies in /tmp so the repo .checkov.yaml skip-path cannot hide them.
 set -euo pipefail
 
@@ -21,19 +21,53 @@ mkdir -p "$work/insecure" "$work/secure"
 cp -a "$insecure/." "$work/insecure/"
 cp -a "$secure/." "$work/secure/"
 
-echo "expecting Checkov failure on insecure fixture"
+echo "expecting Checkov failure on public S3"
 set +e
 checkov -d "$work/insecure" --framework terraform --compact --quiet \
   --config-file "$proof_config" --hard-fail-on CKV_AWS_20
-insecure_status=$?
+s3_status=$?
 set -e
-
-if [[ "$insecure_status" -eq 0 ]]; then
-  echo "FAIL: insecure fixture was accepted. Policy enforcement is not working."
+if [[ "$s3_status" -eq 0 ]]; then
+  echo "FAIL: public S3 fixture was accepted."
   exit 1
 fi
+echo "public S3 fixture was rejected (exit $s3_status)"
 
-echo "insecure fixture was rejected (exit $insecure_status)"
+echo "expecting Checkov failure on wildcard IAM"
+set +e
+checkov -d "$work/insecure" --framework terraform --compact --quiet \
+  --config-file "$proof_config" --check CKV_AWS_62 --hard-fail-on CKV_AWS_62
+iam_status=$?
+set -e
+if [[ "$iam_status" -eq 0 ]]; then
+  echo "FAIL: wildcard IAM fixture was accepted."
+  exit 1
+fi
+echo "wildcard IAM fixture was rejected (exit $iam_status)"
+
+echo "expecting Checkov failure on public SSH security group"
+set +e
+checkov -d "$work/insecure" --framework terraform --compact --quiet \
+  --config-file "$proof_config" --check CKV_AWS_24 --hard-fail-on CKV_AWS_24
+sg_status=$?
+set -e
+if [[ "$sg_status" -eq 0 ]]; then
+  echo "FAIL: public security group fixture was accepted."
+  exit 1
+fi
+echo "public security group fixture was rejected (exit $sg_status)"
+
+echo "expecting Checkov failure on privileged pod"
+set +e
+checkov -f "$work/insecure/privileged-pod.yaml" --framework kubernetes --compact --quiet \
+  --config-file "$proof_config" --check CKV_K8S_16 --hard-fail-on CKV_K8S_16
+k8s_status=$?
+set -e
+if [[ "$k8s_status" -eq 0 ]]; then
+  echo "FAIL: privileged pod fixture was accepted."
+  exit 1
+fi
+echo "privileged pod fixture was rejected (exit $k8s_status)"
 
 echo "expecting Checkov to pass public-access checks on secure fixture"
 checkov -d "$work/secure" --framework terraform --compact --quiet \

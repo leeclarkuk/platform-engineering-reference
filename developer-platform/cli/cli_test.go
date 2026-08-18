@@ -31,6 +31,18 @@ func TestCreateDryRun(t *testing.T) {
 	}
 }
 
+func TestDoctorAWS(t *testing.T) {
+	if err := doctor([]string{"--provider", "aws"}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestValidateAWS(t *testing.T) {
+	if err := validate([]string{"--provider", "aws"}); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestCreateAndValidate(t *testing.T) {
 	dir := t.TempDir()
 	target := filepath.Join(dir, "demo-api")

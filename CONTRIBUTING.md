@@ -24,7 +24,8 @@ make security
 ```
 
 `make deploy` and `make destroy` require an explicit `PROVIDER` and
-`ENVIRONMENT`. They are not part of the default contribution path.
+`ENVIRONMENT`. AWS also requires `STACK`. They are not part of the
+default contribution path.
 
 ## What we will reject
 

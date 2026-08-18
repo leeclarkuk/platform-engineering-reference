@@ -2,8 +2,8 @@
 
 Least privilege is per-cloud:
 
-* AWS: permission sets in Identity Center for humans, IRSA for pods,
-  OIDC roles for GitHub. No IAM users in workload accounts (SCP).
+* AWS: permission sets in Identity Center for humans, EKS Pod Identity
+  for pods, OIDC roles for GitHub. No IAM users in workload accounts (SCP).
 * Azure: Entra PIM for standing-eligible roles, managed identities for
   compute, federated credentials for GitHub.
 * GCP: groups at folder level, Workload Identity for GKE, WIF for GitHub.
