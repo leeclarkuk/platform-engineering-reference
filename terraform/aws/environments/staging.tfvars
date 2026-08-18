@@ -1,9 +1,0 @@
-environment        = "staging"
-name               = "platform-ref"
-vpc_cidr           = "10.30.0.0/16"
-azs                = ["eu-west-2a", "eu-west-2b", "eu-west-2c"]
-enable_nat_gateway = true
-single_nat_gateway = false
-enable_eks         = true
-node_desired_size  = 3
-budget_amount      = 800

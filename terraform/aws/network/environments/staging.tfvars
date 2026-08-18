@@ -1,0 +1,11 @@
+environment                    = "staging"
+name                           = "platform-ref"
+region                         = "eu-west-2"
+management_account_id          = "111111111111"
+network_account_id             = "222222222222"
+workload_account_id            = "333333333333"
+hub_cidr                       = "10.11.0.0/16"
+workload_cidr                  = "10.30.0.0/16"
+azs                            = ["eu-west-2a", "eu-west-2b", "eu-west-2c"]
+private_dns_domain             = "platform.internal"
+auto_accept_shared_attachments = "enable"
