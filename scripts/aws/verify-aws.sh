@@ -29,8 +29,10 @@ for dir in "${stacks[@]}"; do
 done
 
 echo "== terraform test (modules)"
-terraform -chdir=terraform/modules/aws/transit-gateway test || fail=1
-terraform -chdir=terraform/modules/aws/vpc test || fail=1
+for dir in terraform/modules/aws/transit-gateway terraform/modules/aws/vpc; do
+  terraform -chdir="$dir" init -backend=false -input=false >/dev/null
+  terraform -chdir="$dir" test || fail=1
+done
 
 if command -v tflint >/dev/null 2>&1; then
   echo "== tflint"

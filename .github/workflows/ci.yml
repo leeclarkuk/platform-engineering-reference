@@ -35,10 +35,14 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.24.x'
+          go-version: '1.25.13'
           cache-dependency-path: |
             examples/sample-service/go.sum
             developer-platform/cli/go.sum
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.11.4'
+          terraform_wrapper: false
       - name: Test sample service
         run: go test ./...
         working-directory: examples/sample-service
@@ -52,7 +56,7 @@ jobs:
           go -C developer-platform/cli build -o bin/platform ./
       - name: govulncheck
         run: |
-          go install golang.org/x/vuln/cmd/govulncheck@latest
+          go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
           govulncheck -C examples/sample-service ./...
           govulncheck -C developer-platform/cli ./...
 
@@ -135,7 +139,7 @@ jobs:
           config_file: .checkov.yaml
           directory: terraform
       - name: Trivy filesystem
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: fs
           scan-ref: .
