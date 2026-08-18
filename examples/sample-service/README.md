@@ -5,7 +5,8 @@ product.
 
 * `GET /` - service identity
 * `GET /health` - liveness
-* `GET /ready` - readiness
+* `GET /ready` - readiness (set `READY=false` to fail)
 * `GET /metrics` - Prometheus
 
-Structured JSON logs, graceful shutdown, env-based config.
+Structured JSON logs, graceful shutdown, env-based config. In cluster,
+`EXAMPLE_CONFIG` comes from Secrets Manager via External Secrets Operator.

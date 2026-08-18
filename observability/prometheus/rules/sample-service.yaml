@@ -1,0 +1,20 @@
+groups:
+  - name: sample-service-sli
+    interval: 30s
+    rules:
+      - record: sample_service:http_requests:rate5m
+        expr: sum(rate(http_requests_total{job="sample-service"}[5m]))
+      - record: sample_service:http_requests:error_rate5m
+        expr: |
+          sum(rate(http_requests_total{job="sample-service",code="5xx"}[5m]))
+          /
+          clamp_min(sum(rate(http_requests_total{job="sample-service"}[5m])), 1e-9)
+      - record: sample_service:http_request_duration:p95
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le) (rate(http_request_duration_seconds_bucket{job="sample-service",path="/"}[5m]))
+          )
+      - record: sample_service:availability:ratio5m
+        expr: |
+          1 - sample_service:http_requests:error_rate5m

@@ -1,7 +1,9 @@
 # Kubernetes overlays
 
-`base` is the contract. Overlays only change workload identity annotations
-and, later, storage classes. They do not fork the Deployment.
+`base` is the contract. Overlays only change workload identity
+annotations and, later, storage classes. They do not fork the
+Deployment.
 
-Account IDs in overlays are placeholders. Replace them per environment in
-GitOps, not by copying this tree three times.
+On EKS the golden path is Pod Identity, configured in Terraform, so the
+EKS overlay does not add an IRSA annotation. `irsa-patch.yaml` is the
+escape hatch.

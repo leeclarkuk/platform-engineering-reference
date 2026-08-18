@@ -1,0 +1,12 @@
+# Cluster Autoscaler is optional. Terraform creates the Pod Identity
+# association for service account kube-system/cluster-autoscaler.
+# Install the upstream chart against that service account. This file is
+# the namespace-scoped service account only so GitOps has something real
+# to reconcile before the chart is added.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cluster-autoscaler
+  namespace: kube-system
+  labels:
+    app.kubernetes.io/name: cluster-autoscaler

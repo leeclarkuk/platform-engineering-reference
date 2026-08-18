@@ -38,10 +38,14 @@ func New(cfg config.Config, log *slog.Logger) *Server {
 }
 
 func (s *Server) root(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]string{
+	body := map[string]string{
 		"service": s.cfg.ServiceName,
 		"message": "ok",
-	})
+	}
+	if s.cfg.ExampleConfig != "" {
+		body["example_config_present"] = "true"
+	}
+	writeJSON(w, http.StatusOK, body)
 	s.log.InfoContext(r.Context(), "served root", "path", r.URL.Path)
 }
 

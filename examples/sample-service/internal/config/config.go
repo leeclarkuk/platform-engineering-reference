@@ -14,6 +14,7 @@ type Config struct {
 	OTLPEndpoint    string
 	ShutdownTimeout time.Duration
 	Ready           bool
+	ExampleConfig   string
 }
 
 func FromEnv() Config {
@@ -33,7 +34,8 @@ func FromEnv() Config {
 		LogLevel:        level,
 		OTLPEndpoint:    os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"),
 		ShutdownTimeout: timeout,
-		Ready:           true,
+		Ready:           getenv("READY", "true") != "false",
+		ExampleConfig:   os.Getenv("EXAMPLE_CONFIG"),
 	}
 }
 

@@ -1,0 +1,35 @@
+groups:
+  - name: sample-service-alerts
+    rules:
+      - alert: SampleServiceHighErrorRate
+        expr: sample_service:http_requests:error_rate5m > 0.01
+        for: 10m
+        labels:
+          severity: page
+          service: sample-service
+        annotations:
+          summary: Sample service error rate is above 1 percent
+          description: User-path 5xx ratio is {{ $value }}. Availability SLO is 99.9 percent (example only).
+
+      - alert: SampleServiceExcessiveLatency
+        expr: sample_service:http_request_duration:p95 > 0.3
+        for: 15m
+        labels:
+          severity: page
+          service: sample-service
+        annotations:
+          summary: Sample service p95 latency exceeds 300ms
+          description: p95 on GET / is {{ $value }}s. Latency SLO is 95 percent under 300ms (example only).
+
+      - alert: SampleServiceReadinessFailure
+        expr: |
+          kube_deployment_status_replicas_ready{deployment="sample-service"}
+          <
+          kube_deployment_spec_replicas{deployment="sample-service"}
+        for: 5m
+        labels:
+          severity: page
+          service: sample-service
+        annotations:
+          summary: Sample service has unready replicas
+          description: Ready replicas {{ $value }} is below the spec. Kubernetes health checks are failing.

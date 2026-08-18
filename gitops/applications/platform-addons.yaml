@@ -1,18 +1,14 @@
-# Install Argo CD with the upstream HA or non-HA manifest, then apply
-# this Application. Prune is off. Self-heal is on. Removing a manifest
-# from Git will not delete the cluster object until prune is enabled
-# deliberately.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: platform-root
+  name: platform-addons
   namespace: argocd
 spec:
   project: platform
   source:
     repoURL: https://github.com/example-org/platform-engineering-reference.git
     targetRevision: main
-    path: gitops/applications
+    path: gitops/platform
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd
