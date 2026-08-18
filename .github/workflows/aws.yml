@@ -1,0 +1,134 @@
+name: AWS
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aws-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static:
+    name: Static AWS verification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.11.4'
+          terraform_wrapper: false
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.16.4
+      - name: kubeconform
+        run: |
+          curl -fsSL https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz | tar xz
+          sudo mv kubeconform /usr/local/bin/
+      - name: tflint
+        uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: v0.55.1
+      - name: verify-aws
+        run: make verify-aws
+
+  terraform-plan:
+    name: Terraform plan (OIDC)
+    needs: static
+    if: vars.AWS_ROLE_PLAN_ARN != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.11.4'
+          terraform_wrapper: false
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_PLAN_ARN }}
+          aws-region: ${{ vars.AWS_REGION || 'eu-west-2' }}
+          role-session-name: github-plan
+      - name: Plan network and workload
+        run: |
+          for s in network workload; do
+            echo "== plan $s"
+            terraform -chdir=terraform/aws/$s init -backend=false -input=false
+            terraform -chdir=terraform/aws/$s plan -input=false -var-file=environments/dev.tfvars
+          done
+
+  image:
+    name: Build, scan and optionally publish
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: static
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    env:
+      IMAGE_TAG: sha-${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.13'
+          cache-dependency-path: examples/sample-service/go.sum
+      - name: Test
+        run: go test ./...
+        working-directory: examples/sample-service
+      - name: Build image
+        run: docker build -t sample-service:${IMAGE_TAG} examples/sample-service
+      - name: Trivy image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: sample-service:${{ env.IMAGE_TAG }}
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+          ignore-unfixed: true
+      - name: SBOM
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: sample-service:${{ env.IMAGE_TAG }}
+          format: cyclonedx
+          output: sample-service.cdx.json
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sample-service-sbom
+          path: sample-service.cdx.json
+      - name: Sign image
+        if: vars.COSIGN_YES == 'true'
+        uses: sigstore/cosign-installer@v3
+      - name: Cosign
+        if: vars.COSIGN_YES == 'true'
+        run: cosign sign --yes sample-service:${IMAGE_TAG}
+      - uses: aws-actions/configure-aws-credentials@v4
+        if: vars.AWS_ROLE_PUBLISH_ARN != ''
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_PUBLISH_ARN }}
+          aws-region: ${{ vars.AWS_REGION || 'eu-west-2' }}
+          role-session-name: github-image-publish
+      - name: Push ECR
+        if: vars.AWS_ROLE_PUBLISH_ARN != '' && vars.ECR_REPOSITORY != ''
+        run: |
+          aws ecr get-login-password --region "${AWS_REGION:-eu-west-2}" \
+            | docker login --username AWS --password-stdin "$(echo "${{ vars.ECR_REPOSITORY }}" | cut -d/ -f1)"
+          docker tag "sample-service:${IMAGE_TAG}" "${{ vars.ECR_REPOSITORY }}:${IMAGE_TAG}"
+          docker push "${{ vars.ECR_REPOSITORY }}:${IMAGE_TAG}"
+      - name: Pin GitOps image tag
+        if: vars.AWS_ROLE_PUBLISH_ARN != ''
+        run: |
+          sed -i "s/^  tag:.*/  tag: ${IMAGE_TAG}/" gitops/environments/dev/values.yaml
+          git config user.name "platform-ci"
+          git config user.email "platform-ci@users.noreply.github.com"
+          git add gitops/environments/dev/values.yaml
+          git diff --cached --quiet || git commit -m "chore(gitops): pin sample-service ${IMAGE_TAG}"
+          git push

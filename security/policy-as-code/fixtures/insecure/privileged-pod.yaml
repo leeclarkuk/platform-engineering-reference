@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: privileged-do-not-use
+  namespace: default
+spec:
+  containers:
+    - name: app
+      image: public.ecr.aws/docker/library/busybox:latest
+      securityContext:
+        privileged: true
+        runAsUser: 0
+        allowPrivilegeEscalation: true

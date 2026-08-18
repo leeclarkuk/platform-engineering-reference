@@ -16,9 +16,11 @@ the common case and explicit escape hatches for the rest. It does not attempt
 to hide AWS, Azure and Google Cloud behind a lowest-common-denominator
 abstraction.
 
-This is a reference, not a product you apply blindly. Terraform, Kubernetes
-and CI in this repository are real enough to format, validate, lint and test
-without cloud credentials. They are not a click-to-production landing zone.
+This is a reference, not a product you apply blindly. Terraform,
+Kubernetes and CI in this repository are real enough to format,
+validate, lint and test without cloud credentials. The AWS vertical
+slice is deployable into a real estate once account IDs and CIDRs are
+filled. That apply is not proved in this repository's CI.
 
 ## What this is
 
@@ -88,11 +90,10 @@ Cloud foundations sit underneath the clusters. They are not interchangeable.
 ```mermaid
 flowchart LR
   subgraph aws [AWS]
-    Orgs[Organizations and OUs]
-    IdC[IAM Identity Center]
-    TGW[Transit Gateway]
-    EKS2[EKS]
-    Orgs --> IdC --> TGW --> EKS2
+    Orgs[Account IDs supplied externally]
+    Net[Network account / TGW]
+    Wl[Workload account / EKS]
+    Orgs --> Net --> Wl
   end
 
   subgraph azure [Azure]
@@ -112,7 +113,7 @@ flowchart LR
   end
 
   K8s[Common Kubernetes and GitOps layer]
-  EKS2 --> K8s
+  Wl --> K8s
   AKS2 --> K8s
   GKE2 --> K8s
 ```
@@ -147,7 +148,7 @@ Detail: [docs/principles](docs/principles/README.md).
 
 | Provider | Depth in this commit | Native centre of gravity |
 | --- | --- | --- |
-| AWS | Landing zone concepts, VPC, TGW, EKS, security baseline, budgets | Organizations, IAM Identity Center, Transit Gateway |
+| AWS | Network + workload accounts, TGW routing, EKS, ECR, OIDC, GitOps | Organizations, IAM Identity Center, Transit Gateway |
 | Azure | Architecture, hub-and-spoke / Virtual WAN, AKS skeleton | Management Groups, Entra ID, Azure Policy |
 | GCP | Architecture, Shared VPC / NCC, GKE skeleton | Folders, projects, Shared VPC, Workload Identity |
 
@@ -170,19 +171,29 @@ does not provision cloud accounts. That remains a platform-team change.
 
 ## Platform capabilities
 
+Statuses are honest. **Implemented** means the code exists.
+**Locally proved** means `make verify-aws` (or equivalent) passes.
+**Live proved** means it has been applied and traffic-tested in AWS.
+Nothing in this repository is live proved by CI.
+
 | Capability | Status |
 | --- | --- |
-| AWS landing zone architecture and Terraform foundations | Implemented |
+| AWS network account | Implemented, locally proved |
+| AWS workload account | Implemented, locally proved |
+| Transit Gateway routing | Implemented, locally proved |
+| EKS | Implemented, locally proved |
+| ECR | Implemented, locally proved |
+| GitHub OIDC | Implemented, locally proved |
+| Argo CD | Implemented, not live proved |
+| Sample workload | Implemented, locally proved |
+| Observability (rules, dashboard, alerts) | Implemented, locally proved |
+| Workload identity (Pod Identity) | Implemented, locally proved |
+| Secrets Manager + ESO contract | Implemented, locally proved |
+| Security policy proof | Implemented, locally proved |
+| Pod / bad deploy / NetworkPolicy / node drain tests | Implemented, not live proved |
+| Real AWS apply | Not proved |
+| Live traffic verification | Not proved |
 | Azure and GCP equivalent architectures | Documented, Terraform skeletons |
-| Shared Kubernetes base for EKS, AKS, GKE | Implemented |
-| Argo CD bootstrap and application layout | Implemented |
-| Sample Go API with metrics, traces, probes | Implemented |
-| `platform` CLI (`version`, `doctor`, `create service`, `validate`) | Implemented |
-| GitHub Actions CI without standing cloud keys | Implemented |
-| Policy-as-code fixture proving scanners reject insecure IaC | Implemented |
-| Failure-lab experiment framework | Implemented |
-| FinOps tagging, budgets and cost models | Implemented |
-| Full multi-account apply against live clouds | Not in this commit |
 | Developer portal UI | Explicitly deferred, see ADR-009 |
 
 ## Repository structure
@@ -228,11 +239,13 @@ make build
 Plan infrastructure only with an explicit provider and environment:
 
 ```bash
-make plan PROVIDER=aws ENVIRONMENT=dev
+make plan PROVIDER=aws ENVIRONMENT=dev STACK=network
+make verify-aws
 ```
 
-There is no default `make deploy`. Destruction requires both `PROVIDER` and
-`ENVIRONMENT` and will refuse to run without them.
+There is no default `make deploy`. AWS apply requires `STACK` and
+`CONFIRM=yes`. Destruction requires `PROVIDER`, `ENVIRONMENT` and, on
+AWS, `STACK`.
 
 ## Current implementation status
 
@@ -240,17 +253,19 @@ Honest status, not a badge board:
 
 * **Ready to read and debate:** architecture, principles, ADRs, operating
   model, Northstar Rail migration case study.
-* **Ready to validate locally:** Terraform fmt/validate, Go tests, Helm lint,
-  policy fixtures, Makefile targets.
-* **Not ready to apply to a live organisation:** account IDs, DNS, CIDRs,
-  identity providers and connectivity must be designed for that estate.
+* **Ready to validate locally:** `make verify-aws`, Terraform tests, Go
+  tests, Helm lint, policy fixtures.
+* **Ready to apply with your account IDs:** the AWS bootstrap, network
+  and workload stacks. Not proved against a live organisation in CI.
+* **Planned:** Azure/GCP depth, hub egress, organisation-wide security
+  admin, Kyverno.
+
+See [docs/aws/deployment.md](docs/aws/deployment.md).
 
 ## Roadmap
 
 See [docs/ROADMAP.md](docs/ROADMAP.md). The next useful increment is a
-repeatable AWS network hub plus one workload account that can run the sample
-service under Argo CD, still without requiring this repository to hold
-secrets.
+live apply of this AWS slice plus Azure brought to the same depth.
 
 ## Design decisions
 

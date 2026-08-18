@@ -17,7 +17,7 @@ func main() {
 	case "version", "--version", "-v":
 		fmt.Println(version)
 	case "doctor":
-		err = doctor()
+		err = doctor(os.Args[2:])
 	case "validate":
 		err = validate(os.Args[2:])
 	case "create":
@@ -40,10 +40,28 @@ func usage(w *os.File) {
 
 Usage:
   platform version
-  platform doctor
+  platform doctor [--provider aws]
   platform create service <name> [--dir PATH] [--dry-run]
   platform validate [PATH]
+  platform validate --provider aws
 
 The CLI does not require cloud credentials.
 `)
+}
+
+func parseProvider(args []string) (provider string, rest []string, err error) {
+	rest = make([]string, 0, len(args))
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--provider":
+			if i+1 >= len(args) {
+				return "", nil, fmt.Errorf("--provider requires a value")
+			}
+			i++
+			provider = args[i]
+		default:
+			rest = append(rest, args[i])
+		}
+	}
+	return provider, rest, nil
 }

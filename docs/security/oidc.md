@@ -30,15 +30,18 @@ permissions:
 
 ## AWS
 
-1. Create an IAM OIDC provider for `token.actions.githubusercontent.com`.
-2. Create a role with a trust policy on `sub` and `aud`.
-3. Attach the smallest policy that job needs (ECR push, or `terraform plan`
-   on a state bucket). Split roles per job.
-4. In the workflow: `aws-actions/configure-aws-credentials` with
-   `role-to-assume` and `role-session-name`.
+Terraform in `terraform/modules/aws/github-oidc` creates the provider
+and three roles: `github-plan`, `github-deploy`, `github-image-publish`.
+Trust is bound to `repo:<org>/<repo>` plus environments or `main`. See
+[docs/aws/deployment.md](../aws/deployment.md).
 
-IRSA for workloads is separate: an IAM role bound to a Kubernetes service
-account. CI roles must not be reusable as pod roles.
+Workload pods use EKS Pod Identity, not these GitHub roles. CI roles
+must not be reusable as pod roles.
+
+In the workflow: `aws-actions/configure-aws-credentials` with
+`role-to-assume` and `role-session-name`. `.github/workflows/aws.yml`
+skips cloud jobs when the role ARNs are unset, so pull requests stay
+safe.
 
 ## Azure
 

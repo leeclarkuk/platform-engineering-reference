@@ -1,0 +1,11 @@
+environment                    = "dev"
+name                           = "platform-ref"
+region                         = "eu-west-2"
+management_account_id          = "111111111111"
+network_account_id             = "222222222222"
+workload_account_id            = "333333333333"
+hub_cidr                       = "10.10.0.0/16"
+workload_cidr                  = "10.20.0.0/16"
+azs                            = ["eu-west-2a", "eu-west-2b"]
+private_dns_domain             = "platform.internal"
+auto_accept_shared_attachments = "enable"

@@ -1,35 +1,37 @@
 # Roadmap
 
-This commit is a foundation. It is useful to read, lint, validate and
-argue with. It is not a landing zone you point at a live organisation.
+This commit is a working AWS vertical slice that validates locally. It
+is not a landing zone you point at a live organisation without filling
+account IDs, CIDRs and identity.
 
 ## Now (this repository)
 
 * Principles, ADRs, operating model
-* AWS Terraform modules for tags, VPC, TGW attachment, EKS, KMS, ECR,
-  security baseline, budgets
+* AWS Terraform split into bootstrap, network and workload state
+* Transit Gateway routing with static assertions
+* EKS with Pod Identity, add-ons, private nodes
+* ECR, GitHub OIDC, Secrets Manager contract
+* Argo CD bootstrap and Helm golden path
+* Sample Go service, probes, NetworkPolicy, SLO rules
+* Failure-lab runners for pod, bad rollout, NetworkPolicy, node drain
 * Azure and GCP architecture plus Terraform skeletons
-* Sample Go service, Helm, Kubernetes base and overlays
-* Argo CD bootstrap layout
-* `platform` CLI
-* CI, policy fixtures, failure-lab write-ups, FinOps models
 
 ## Next
 
-1. One AWS network hub and one workload account running the sample
-   service under Argo CD
-2. External Secrets Operator wired to Secrets Manager in that account
-3. Signed images in ECR with a real OIDC GitHub federation example
-   (still no standing keys)
-4. Azure hub-and-spoke Terraform brought up to the same depth as AWS VPC
-5. GCP Shared VPC host/service pair at the same depth
+1. Apply the AWS slice to a real network and workload account and run
+   `make verify-live`
+2. Install kube-prometheus-stack and External Secrets Operator for real
+   rather than as a documented bootstrap
+3. Azure hub-and-spoke Terraform brought up to the same depth as AWS VPC
+4. GCP Shared VPC host/service pair at the same depth
 
 ## Later
 
 * Kyverno (or Gatekeeper) policies beyond the documented set
 * Binary Authorization / equivalent on GKE and AKS
 * Developer portal only if ADR-009's conditions are met
-* Failure-lab automation for pod kill and dependency failure
+* Hub egress, inspection and hybrid connectivity when there is a real
+  requirement
 * Cost dashboards fed from native billing exports
 
 ## Explicitly not planned

@@ -1,0 +1,8 @@
+# Copy to backend.hcl after bootstrap.
+# terraform init -backend-config=backend.hcl
+
+bucket       = "platform-ref-dev-tfstate-333333333333"
+key          = "workload/dev/terraform.tfstate"
+region       = "eu-west-2"
+encrypt      = true
+use_lockfile = true

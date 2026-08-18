@@ -4,7 +4,7 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = ">= 5.0.0"
+      version = "~> 5.80"
     }
   }
 }
@@ -17,6 +17,12 @@ variable "name" {
 variable "description" {
   description = "Key description."
   type        = string
+}
+
+variable "additional_key_users" {
+  description = "IAM principal ARNs allowed to use the key (Encrypt, Decrypt, CreateGrant). Account root already authorised via the key policy; this is for explicit service roles."
+  type        = list(string)
+  default     = []
 }
 
 variable "tags" {
@@ -52,6 +58,31 @@ data "aws_iam_policy_document" "this" {
       identifiers = ["logs.${data.aws_region.current.name}.amazonaws.com"]
     }
     resources = ["*"]
+  }
+
+  dynamic "statement" {
+    for_each = length(var.additional_key_users) > 0 ? [1] : []
+    content {
+      sid = "AllowListedKeyUsers"
+      actions = [
+        "kms:Encrypt",
+        "kms:Decrypt",
+        "kms:ReEncrypt*",
+        "kms:GenerateDataKey*",
+        "kms:DescribeKey",
+        "kms:CreateGrant",
+      ]
+      principals {
+        type        = "AWS"
+        identifiers = var.additional_key_users
+      }
+      resources = ["*"]
+      condition {
+        test     = "Bool"
+        variable = "kms:GrantIsForAWSResource"
+        values   = ["true"]
+      }
+    }
   }
 }
 

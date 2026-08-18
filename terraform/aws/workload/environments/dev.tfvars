@@ -1,0 +1,24 @@
+environment           = "dev"
+name                  = "platform-ref"
+region                = "eu-west-2"
+management_account_id = "111111111111"
+network_account_id    = "222222222222"
+workload_account_id   = "333333333333"
+vpc_cidr              = "10.20.0.0/16"
+network_hub_cidr      = "10.10.0.0/16"
+azs                   = ["eu-west-2a", "eu-west-2b"]
+# Replace from network stack outputs before a real apply.
+transit_gateway_id                   = "tgw-0123456789abcdef0"
+transit_gateway_hub_route_table_id   = "tgw-rtb-0123456789abcdef0"
+transit_gateway_spoke_route_table_id = "tgw-rtb-0123456789abcdef1"
+enable_nat_gateway                   = true
+single_nat_gateway                   = true
+enable_eks                           = true
+node_desired_size                    = 2
+node_min_size                        = 1
+node_max_size                        = 4
+github_org                           = "example-org"
+github_repo                          = "platform-engineering-reference"
+github_deploy_environments           = ["dev"]
+allowed_admin_principals             = []
+budget_amount                        = 200

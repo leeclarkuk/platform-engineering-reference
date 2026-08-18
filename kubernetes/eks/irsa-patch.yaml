@@ -1,0 +1,9 @@
+# Escape hatch: IRSA instead of EKS Pod Identity.
+# Not included in kustomization.yaml. See ADR-011.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sample-service
+  namespace: sample-service
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/sample-service

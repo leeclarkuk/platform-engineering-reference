@@ -4,17 +4,30 @@ metadata:
   name: sample-service
   namespace: argocd
 spec:
-  project: default
-  source:
-    repoURL: https://github.com/example/platform-engineering-reference.git
-    targetRevision: main
-    path: kubernetes/eks
+  project: platform
+  sources:
+    - repoURL: https://github.com/example-org/platform-engineering-reference.git
+      targetRevision: main
+      path: examples/sample-service/deploy/helm/sample-service
+      helm:
+        releaseName: sample-service
+        valueFiles:
+          - $values/gitops/environments/dev/values.yaml
+    - repoURL: https://github.com/example-org/platform-engineering-reference.git
+      targetRevision: main
+      ref: values
   destination:
     server: https://kubernetes.default.svc
     namespace: sample-service
   syncPolicy:
     automated:
-      prune: true
+      prune: false
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+      - RespectIgnoreDifferences=true
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas

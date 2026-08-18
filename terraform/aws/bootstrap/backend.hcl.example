@@ -1,0 +1,14 @@
+# Copy to backend.hcl and fill from bootstrap outputs.
+# terraform init -backend-config=backend.hcl
+#
+# Terraform >= 1.10 uses native S3 lock files (use_lockfile).
+# DynamoDB locking is not required. Keep it only if an older Terraform
+# version must still take locks against this bucket.
+
+bucket       = "platform-ref-dev-tfstate-222222222222"
+key          = "bootstrap/terraform.tfstate"
+region       = "eu-west-2"
+encrypt      = true
+use_lockfile = true
+# kms_key_id = "arn:aws:kms:eu-west-2:222222222222:key/00000000-0000-0000-0000-000000000000"
+# dynamodb_table = "platform-ref-dev-tfstate-lock"

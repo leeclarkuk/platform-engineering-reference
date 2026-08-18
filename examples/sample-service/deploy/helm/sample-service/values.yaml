@@ -2,11 +2,14 @@ name: sample-service
 replicaCount: 2
 
 image:
-  repository: ghcr.io/example/sample-service
-  tag: "0.1.0"
+  repository: 111111111111.dkr.ecr.eu-west-2.amazonaws.com/platform-ref/sample-service
+  # CI writes a sha-<gitsha> tag. Do not use latest.
+  tag: "sha-unreleased"
+  digest: ""
   pullPolicy: IfNotPresent
 
 service:
+  type: ClusterIP
   port: 8080
 
 resources:
@@ -29,3 +32,23 @@ podDisruptionBudget:
 env:
   SERVICE_NAME: sample-service
   LOG_LEVEL: info
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.observability.svc.cluster.local:4318
+
+externalSecret:
+  enabled: true
+  secretName: sample-service-config
+  remoteKey: /sample-service/example-config
+  targetKey: EXAMPLE_CONFIG
+
+serviceMonitor:
+  enabled: true
+  interval: 15s
+
+podIdentity:
+  roleArn: ""
+
+networkPolicy:
+  # Additional namespaces allowed to scrape / call the service.
+  allowFromNamespaces:
+    - argocd
+    - observability

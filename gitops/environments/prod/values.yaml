@@ -1,0 +1,11 @@
+image:
+  repository: 111111111111.dkr.ecr.eu-west-2.amazonaws.com/platform-ref/sample-service
+  tag: sha-unreleased
+  digest: ""
+
+replicaCount: 3
+
+env:
+  SERVICE_NAME: sample-service
+  LOG_LEVEL: info
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.observability.svc.cluster.local:4318

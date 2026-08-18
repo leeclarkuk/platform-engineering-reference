@@ -1,14 +1,16 @@
-# Install Argo CD with the upstream manifest in a real cluster, then point
-# it at this repository. This file is the App of Apps root.
+# Install Argo CD with the upstream HA or non-HA manifest, then apply
+# this Application. Prune is off. Self-heal is on. Removing a manifest
+# from Git will not delete the cluster object until prune is enabled
+# deliberately.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: platform-root
   namespace: argocd
 spec:
-  project: default
+  project: platform
   source:
-    repoURL: https://github.com/example/platform-engineering-reference.git
+    repoURL: https://github.com/example-org/platform-engineering-reference.git
     targetRevision: main
     path: gitops/applications
   destination:
@@ -16,5 +18,7 @@ spec:
     namespace: argocd
   syncPolicy:
     automated:
-      prune: true
+      prune: false
       selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

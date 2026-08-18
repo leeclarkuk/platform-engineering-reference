@@ -5,6 +5,7 @@ metadata:
   labels:
     app.kubernetes.io/name: {{ .Values.name }}
 spec:
+  type: {{ .Values.service.type }}
   selector:
     app.kubernetes.io/name: {{ .Values.name }}
   ports:
@@ -18,6 +19,10 @@ metadata:
   name: {{ .Values.name }}
   labels:
     app.kubernetes.io/name: {{ .Values.name }}
+  {{- if .Values.podIdentity.roleArn }}
+  annotations:
+    eks.amazonaws.com/role-arn: {{ .Values.podIdentity.roleArn | quote }}
+  {{- end }}
 automountServiceAccountToken: true
 ---
 apiVersion: policy/v1
@@ -50,39 +55,3 @@ spec:
           type: Utilization
           averageUtilization: {{ .Values.autoscaling.targetCPUUtilizationPercentage }}
 {{- end }}
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: {{ .Values.name }}
-spec:
-  podSelector:
-    matchLabels:
-      app.kubernetes.io/name: {{ .Values.name }}
-  policyTypes:
-    - Ingress
-    - Egress
-  ingress:
-    - from:
-        - podSelector: {}
-      ports:
-        - protocol: TCP
-          port: {{ .Values.service.port }}
-  egress:
-    - to:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: kube-system
-      ports:
-        - protocol: UDP
-          port: 53
-        - protocol: TCP
-          port: 53
-    - to:
-        - ipBlock:
-            cidr: 0.0.0.0/0
-            except:
-              - 169.254.169.254/32
-      ports:
-        - protocol: TCP
-          port: 443

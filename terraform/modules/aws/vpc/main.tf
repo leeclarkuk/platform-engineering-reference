@@ -4,7 +4,7 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = ">= 5.0.0"
+      version = "~> 5.80"
     }
   }
 }
@@ -24,10 +24,16 @@ variable "azs" {
   type        = list(string)
 }
 
-variable "enable_nat_gateway" {
-  description = "Create NAT gateways for private subnets. Prefer centralised egress in production hubs."
+variable "create_public_subnets" {
+  description = "Create public subnets and an internet gateway. Hub VPCs can omit these."
   type        = bool
   default     = true
+}
+
+variable "enable_nat_gateway" {
+  description = "Create NAT gateways for private subnets. Prefer centralised egress in production hubs. Required here only when workloads need non-AWS internet (for example Argo CD cloning GitHub)."
+  type        = bool
+  default     = false
 }
 
 variable "single_nat_gateway" {
@@ -46,6 +52,42 @@ variable "transit_gateway_id" {
   description = "Optional TGW to attach."
   type        = string
   default     = null
+}
+
+variable "transit_gateway_routes" {
+  description = "CIDRs sent from private (and TGW) route tables to the Transit Gateway. Do not include 0.0.0.0/0 unless allow_default_route_to_tgw is true."
+  type        = list(string)
+  default     = []
+}
+
+variable "allow_default_route_to_tgw" {
+  description = "Permit a 0.0.0.0/0 route toward the Transit Gateway. Off unless hub egress is actually implemented."
+  type        = bool
+  default     = false
+}
+
+variable "kubernetes_cluster_name" {
+  description = "If set, tag subnets for this EKS cluster."
+  type        = string
+  default     = null
+}
+
+variable "interface_endpoints" {
+  description = "Interface VPC endpoint service names (suffix only, for example ecr.api)."
+  type        = set(string)
+  default = [
+    "ecr.api",
+    "ecr.dkr",
+    "logs",
+    "sts",
+    "secretsmanager",
+    "eks",
+    "ec2",
+    "kms",
+    "ssm",
+    "ssmmessages",
+    "ec2messages",
+  ]
 }
 
 variable "kms_key_arn" {
@@ -71,7 +113,28 @@ locals {
   tgw_subnets = [
     for i, az in local.azs : cidrsubnet(var.cidr, 8, 192 + i)
   ]
+
+  cluster_tags = var.kubernetes_cluster_name == null ? {} : {
+    "kubernetes.io/cluster/${var.kubernetes_cluster_name}" = "shared"
+  }
+
+  tgw_cidrs = toset(var.transit_gateway_id == null ? [] : var.transit_gateway_routes)
 }
+
+resource "terraform_data" "default_route_guard" {
+  lifecycle {
+    precondition {
+      condition     = var.allow_default_route_to_tgw || !contains(var.transit_gateway_routes, "0.0.0.0/0")
+      error_message = "A default route to the Transit Gateway requires allow_default_route_to_tgw = true. This slice does not implement hub egress."
+    }
+    precondition {
+      condition     = !var.enable_nat_gateway || var.create_public_subnets
+      error_message = "NAT gateways require public subnets and an internet gateway."
+    }
+  }
+}
+
+data "aws_region" "current" {}
 
 resource "aws_vpc" "this" {
   cidr_block           = var.cidr
@@ -86,17 +149,18 @@ resource "aws_default_security_group" "this" {
 }
 
 resource "aws_internet_gateway" "this" {
+  count  = var.create_public_subnets ? 1 : 0
   vpc_id = aws_vpc.this.id
   tags   = merge(var.tags, { Name = "${var.name}-igw" })
 }
 
 resource "aws_subnet" "public" {
-  count                   = length(local.azs)
+  count                   = var.create_public_subnets ? length(local.azs) : 0
   vpc_id                  = aws_vpc.this.id
   cidr_block              = local.public_subnets[count.index]
   availability_zone       = local.azs[count.index]
   map_public_ip_on_launch = false
-  tags = merge(var.tags, {
+  tags = merge(var.tags, local.cluster_tags, {
     Name                     = "${var.name}-public-${local.azs[count.index]}"
     "kubernetes.io/role/elb" = "1"
     Tier                     = "public"
@@ -108,7 +172,7 @@ resource "aws_subnet" "private" {
   vpc_id            = aws_vpc.this.id
   cidr_block        = local.private_subnets[count.index]
   availability_zone = local.azs[count.index]
-  tags = merge(var.tags, {
+  tags = merge(var.tags, local.cluster_tags, {
     Name                              = "${var.name}-private-${local.azs[count.index]}"
     "kubernetes.io/role/internal-elb" = "1"
     Tier                              = "private"
@@ -141,20 +205,22 @@ resource "aws_nat_gateway" "this" {
 }
 
 resource "aws_route_table" "public" {
+  count  = var.create_public_subnets ? 1 : 0
   vpc_id = aws_vpc.this.id
   tags   = merge(var.tags, { Name = "${var.name}-public" })
 }
 
 resource "aws_route" "public_internet" {
-  route_table_id         = aws_route_table.public.id
+  count                  = var.create_public_subnets ? 1 : 0
+  route_table_id         = aws_route_table.public[0].id
   destination_cidr_block = "0.0.0.0/0"
-  gateway_id             = aws_internet_gateway.this.id
+  gateway_id             = aws_internet_gateway.this[0].id
 }
 
 resource "aws_route_table_association" "public" {
-  count          = length(local.azs)
+  count          = var.create_public_subnets ? length(local.azs) : 0
   subnet_id      = aws_subnet.public[count.index].id
-  route_table_id = aws_route_table.public.id
+  route_table_id = aws_route_table.public[0].id
 }
 
 resource "aws_route_table" "private" {
@@ -170,10 +236,48 @@ resource "aws_route" "private_nat" {
   nat_gateway_id         = aws_nat_gateway.this[var.single_nat_gateway ? 0 : count.index].id
 }
 
+resource "aws_route" "private_tgw" {
+  for_each = {
+    for pair in flatten([
+      for rt_idx, _rt in aws_route_table.private : [
+        for cidr in local.tgw_cidrs : {
+          key    = "${rt_idx}:${cidr}"
+          rt_idx = rt_idx
+          cidr   = cidr
+        }
+      ]
+    ]) : pair.key => pair
+  }
+
+  route_table_id         = aws_route_table.private[each.value.rt_idx].id
+  destination_cidr_block = each.value.cidr
+  transit_gateway_id     = var.transit_gateway_id
+}
+
 resource "aws_route_table_association" "private" {
   count          = length(local.azs)
   subnet_id      = aws_subnet.private[count.index].id
-  route_table_id = aws_route_table.private[var.single_nat_gateway ? 0 : count.index].id
+  route_table_id = aws_route_table.private[var.single_nat_gateway || !var.enable_nat_gateway ? 0 : count.index].id
+}
+
+resource "aws_route_table" "tgw" {
+  count  = var.transit_gateway_id == null ? 0 : 1
+  vpc_id = aws_vpc.this.id
+  tags   = merge(var.tags, { Name = "${var.name}-tgw" })
+}
+
+resource "aws_route" "tgw_to_hub_or_spokes" {
+  for_each = var.transit_gateway_id == null ? toset([]) : local.tgw_cidrs
+
+  route_table_id         = aws_route_table.tgw[0].id
+  destination_cidr_block = each.value
+  transit_gateway_id     = var.transit_gateway_id
+}
+
+resource "aws_route_table_association" "tgw" {
+  count          = var.transit_gateway_id == null ? 0 : length(local.azs)
+  subnet_id      = aws_subnet.tgw[count.index].id
+  route_table_id = aws_route_table.tgw[0].id
 }
 
 resource "aws_ec2_transit_gateway_vpc_attachment" "this" {
@@ -181,7 +285,14 @@ resource "aws_ec2_transit_gateway_vpc_attachment" "this" {
   subnet_ids         = aws_subnet.tgw[*].id
   transit_gateway_id = var.transit_gateway_id
   vpc_id             = aws_vpc.this.id
-  tags               = merge(var.tags, { Name = "${var.name}-tgw-attach" })
+
+  dns_support                                     = "enable"
+  ipv6_support                                    = "disable"
+  appliance_mode_support                          = "disable"
+  transit_gateway_default_route_table_association = false
+  transit_gateway_default_route_table_propagation = false
+
+  tags = merge(var.tags, { Name = "${var.name}-tgw-attach" })
 }
 
 resource "aws_cloudwatch_log_group" "flow" {
@@ -267,19 +378,16 @@ resource "aws_vpc_endpoint" "s3" {
   vpc_id            = aws_vpc.this.id
   service_name      = "com.amazonaws.${data.aws_region.current.name}.s3"
   vpc_endpoint_type = "Gateway"
-  route_table_ids   = concat([aws_route_table.public.id], aws_route_table.private[*].id)
-  tags              = merge(var.tags, { Name = "${var.name}-s3" })
+  route_table_ids = compact(concat(
+    aws_route_table.public[*].id,
+    aws_route_table.private[*].id,
+    aws_route_table.tgw[*].id,
+  ))
+  tags = merge(var.tags, { Name = "${var.name}-s3" })
 }
 
 resource "aws_vpc_endpoint" "interface" {
-  for_each = toset([
-    "ecr.api",
-    "ecr.dkr",
-    "logs",
-    "sts",
-    "secretsmanager",
-    "eks",
-  ])
+  for_each = var.interface_endpoints
 
   vpc_id              = aws_vpc.this.id
   service_name        = "com.amazonaws.${data.aws_region.current.name}.${each.key}"
@@ -290,11 +398,14 @@ resource "aws_vpc_endpoint" "interface" {
   tags                = merge(var.tags, { Name = "${var.name}-${each.key}" })
 }
 
-data "aws_region" "current" {}
-
 output "vpc_id" {
   description = "VPC ID."
   value       = aws_vpc.this.id
+}
+
+output "vpc_cidr" {
+  description = "VPC CIDR."
+  value       = aws_vpc.this.cidr_block
 }
 
 output "private_subnet_ids" {
@@ -307,7 +418,27 @@ output "public_subnet_ids" {
   value       = aws_subnet.public[*].id
 }
 
+output "tgw_subnet_ids" {
+  description = "Transit Gateway attachment subnet IDs."
+  value       = aws_subnet.tgw[*].id
+}
+
+output "private_route_table_ids" {
+  description = "Private route table IDs."
+  value       = aws_route_table.private[*].id
+}
+
+output "tgw_attachment_id" {
+  description = "Transit Gateway VPC attachment ID, if created."
+  value       = try(aws_ec2_transit_gateway_vpc_attachment.this[0].id, null)
+}
+
 output "endpoint_security_group_id" {
   description = "Security group used by interface endpoints."
   value       = aws_security_group.endpoints.id
+}
+
+output "transit_gateway_routes" {
+  description = "CIDRs routed to the Transit Gateway from this VPC."
+  value       = sort(var.transit_gateway_routes)
 }

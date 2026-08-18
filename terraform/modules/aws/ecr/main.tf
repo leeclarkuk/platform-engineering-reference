@@ -4,7 +4,7 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = ">= 5.0.0"
+      version = "~> 5.80"
     }
   }
 }
@@ -19,6 +19,12 @@ variable "kms_key_arn" {
   type        = string
 }
 
+variable "scan_on_push" {
+  description = "Scan images when they are pushed."
+  type        = bool
+  default     = true
+}
+
 variable "tags" {
   description = "Tags."
   type        = map(string)
@@ -30,7 +36,7 @@ resource "aws_ecr_repository" "this" {
   force_delete         = false
 
   image_scanning_configuration {
-    scan_on_push = true
+    scan_on_push = var.scan_on_push
   }
 
   encryption_configuration {
@@ -47,11 +53,23 @@ resource "aws_ecr_lifecycle_policy" "this" {
     rules = [
       {
         rulePriority = 1
-        description  = "Keep last 20 images"
+        description  = "Keep the last 30 tagged images"
         selection = {
-          tagStatus   = "any"
-          countType   = "imageCountMoreThan"
-          countNumber = 20
+          tagStatus     = "tagged"
+          tagPrefixList = ["sha-", "v"]
+          countType     = "imageCountMoreThan"
+          countNumber   = 30
+        }
+        action = { type = "expire" }
+      },
+      {
+        rulePriority = 2
+        description  = "Expire untagged images after 7 days"
+        selection = {
+          tagStatus   = "untagged"
+          countType   = "sinceImagePushed"
+          countNumber = 7
+          countUnit   = "days"
         }
         action = { type = "expire" }
       }

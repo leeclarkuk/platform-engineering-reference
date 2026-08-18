@@ -1,9 +1,0 @@
-environment        = "dev"
-name               = "platform-ref"
-vpc_cidr           = "10.20.0.0/16"
-azs                = ["eu-west-2a", "eu-west-2b"]
-enable_nat_gateway = true
-single_nat_gateway = true
-enable_eks         = true
-node_desired_size  = 2
-budget_amount      = 200

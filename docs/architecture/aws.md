@@ -5,80 +5,85 @@ point, not a value judgement.
 
 ## Account model
 
-Control Tower-style OUs, even if you build them with Organizations APIs
-rather than the Control Tower product. The product is optional. The
-isolation is not.
+Implemented in this slice: three accounts as variables, not an automated
+Control Tower landing zone.
+
+```text
+Management account     (IDs supplied externally; optional SCPs)
+    |
+    +-- Network account    terraform/aws/network
+    |
+    +-- Workload account   terraform/aws/workload
+```
+
+The broader OU layout below is **planned**, not applied by this
+repository:
 
 ```text
 Root
-├── Security
-│   ├── Log archive
-│   └── Security tooling (GuardDuty org, Security Hub, Config aggregator)
+├── Security            planned (log archive, security tooling)
 ├── Infrastructure
-│   ├── Identity (IAM Identity Center delegated admin)
-│   ├── Network (Transit Gateway, shared DNS, central egress)
-│   └── Shared services
+│   ├── Identity        planned (IAM Identity Center delegated admin)
+│   ├── Network         implemented (TGW, hub VPC, private DNS zone)
+│   └── Shared services planned
 ├── Workloads
-│   ├── Prod
-│   ├── Staging
-│   └── Dev
-└── Sandbox
+│   └── One workload account implemented (dev/staging/prod via tfvars)
+└── Sandbox             planned
 ```
 
-Humans do not use long-lived access keys. IAM Identity Center maps groups
-to permission sets. Workloads use IRSA.
+Humans do not use long-lived access keys. GitHub uses OIDC. Application
+pods use EKS Pod Identity. IRSA is the documented hatch.
 
 ## Network
 
 ```mermaid
 flowchart LR
-  OnPrem[On-prem / partners] --> VPN[Site-to-site VPN]
-  VPN --> TGW[Transit Gateway]
-  TGW --> Egress[Egress VPC with NAT and inspection]
-  TGW --> Prod[Prod spoke VPC]
-  TGW --> Nonprod[Nonprod spoke VPC]
-  TGW --> Shared[Shared services VPC]
-  Prod --> EKS[EKS]
+  Hub[Hub VPC in network account]
+  TGW[Transit Gateway]
+  Spoke[Workload VPC]
+  EKS[Private EKS]
+  Hub --> TGW --> Spoke --> EKS
 ```
 
-* Private and public subnets per AZ. Public subnets exist for load
-  balancers, not for workloads.
-* NAT is centralised in the egress VPC for production. Local NAT in
-  sandboxes is an allowed hatch.
-* VPC endpoints for STS, ECR, S3, Logs, Secrets Manager, EKS APIs. This is
-  a cost and reliability decision, not decoration.
-* Route 53 private hosted zones associated to spokes via the network
-  account.
+Implemented: hub VPC, spoke VPC, TGW route tables, static routes for the
+two CIDRs, flow logs, VPC endpoints, one NAT in the workload VPC so Argo
+CD can reach GitHub.
 
-Failure modes: a TGW route table change, a NAT exhaustion, a broken
-resolver rule. All three look like "the app is down" to a developer.
+Planned, not implemented: inspection VPC, Network Firewall, Direct
+Connect, site-to-site VPN, centralised hub NAT, default routes via TGW.
+
+Failure modes that would look like "the app is down": a TGW route table
+change, NAT exhaustion, a broken resolver. The failure-lab covers pod,
+bad rollout, NetworkPolicy and node drain. Packet-level TGW failover is
+**not proved**.
 
 ## Security baseline
 
-Every account gets:
+Optional in the workload stack (`enable_security_baseline`). When on:
 
-* CloudTrail (organisation trail, integrity validation, log archive bucket)
-* AWS Config (recorder + organisation aggregator)
-* GuardDuty (organisation)
-* Security Hub (CIS + FSBP)
-* Default EBS and S3 encryption via KMS
+* CloudTrail, Config, GuardDuty, Security Hub in that account
+* Encrypted log bucket, no public access
 * VPC flow logs
 
-SCPs prevent leaving the organisation, disabling CloudTrail, and creating
-IAM users with access keys in workload accounts.
+Organisation-wide trails, delegated admin and SCPs attached to OUs are
+**planned**. `landing-zones/aws` can create deny-access-key and
+deny-leave-org SCPs if you apply it in the management account.
 
 ## Compute
 
-EKS is the golden path for the sample workload. It is not the golden path
-for every AWS service. Lambda, ECS and managed data services remain valid.
-Forcing them through Kubernetes is a religion, not a platform.
+EKS is the golden path for the sample workload. Managed node groups,
+private nodes, secrets encryption, control plane logs, add-ons
+(CoreDNS, VPC CNI, kube-proxy, Pod Identity agent, metrics-server).
+Karpenter is not in this slice.
 
-## Cost controls
+## Status
 
-* Mandatory tags: `Owner`, `Environment`, `CostCentre`, `Service`,
-  `DataClassification`
-* AWS Budgets per account and an org-level anomaly subscription
-* NAT, AZ-crossing, and log ingestion called out in FinOps models
+| Piece | Status |
+| --- | --- |
+| Account variables and separate state | Implemented, validated locally |
+| TGW routing in Terraform | Implemented, validated locally |
+| EKS / ECR / OIDC / secrets | Implemented, validated locally |
+| Argo CD bootstrap scripts and Git layout | Implemented, not live-proved here |
+| Apply to a real AWS organisation | Not proved |
 
-Terraform lives under `terraform/modules/aws` and `terraform/aws`.
-Landing-zone narrative lives under `landing-zones/aws`.
+Terraform existing is not production-ready for your organisation.

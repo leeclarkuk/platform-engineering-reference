@@ -32,5 +32,7 @@ Status is `proposed`, `accepted`, `superseded` or `rejected`.
 | [008](008-observability-architecture.md) | Observability architecture | Accepted |
 | [009](009-build-versus-buy-developer-portal.md) | Build versus buy developer portal | Accepted |
 | [010](010-reliability-and-failure-testing.md) | Reliability and failure testing | Accepted |
+| [011](011-eks-pod-identity.md) | EKS Pod Identity for application workloads | Accepted |
+| [012](012-aws-state-boundaries.md) | AWS Terraform state boundaries | Accepted |
 
 New ADRs take the next number. Do not rewrite history. Supersede instead.
