@@ -129,15 +129,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - name: Gitleaks
         run: |
           curl -fsSL https://github.com/gitleaks/gitleaks/releases/download/v8.24.3/gitleaks_8.24.3_linux_x64.tar.gz | tar xz
           ./gitleaks detect --source . --verbose --redact
+      - name: Install Checkov
+        run: pip install --quiet 'checkov==3.3.11'
       - name: Checkov
-        uses: bridgecrewio/checkov-action@v12
-        with:
-          config_file: .checkov.yaml
-          directory: terraform
+        run: checkov -d terraform --config-file .checkov.yaml
       - name: Trivy filesystem
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
