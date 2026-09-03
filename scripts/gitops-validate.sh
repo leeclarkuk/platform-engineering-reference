@@ -18,8 +18,9 @@ fail() {
   exit 1
 }
 
-pin_get() {
-  local key="$1"
+pin_get_from() {
+  local pins_file="$1"
+  local key="$2"
   awk -F ': ' -v k="$key" '
     $1 == k {
       val = $2
@@ -27,43 +28,124 @@ pin_get() {
       print val
       exit
     }
-  ' "$pins"
+  ' "$pins_file"
 }
-
-assert_schema_dir() {
-  local dir="$1"
-  local label="$2"
-  [[ -d "$dir" ]] || fail "missing schema directory ${dir}"
-  local count
-  count="$(find "$dir" -type f -name '*.json' | wc -l | tr -d ' ')"
-  [[ "$count" -ge 1 ]] || fail "schema directory empty (${label}): ${dir}"
-  printf 'ok schema dir %s (%s json files)\n' "$label" "$count"
-}
-
-[[ -f "$pins" ]] || fail "missing ${pins}"
-
-assert_schema_dir "$k8s_schema_dir" "kubernetes"
-assert_schema_dir "$argo_schema_dir" "argocd"
-
-kustomize_version="$(pin_get kustomize_version)"
-kustomize_archive="$(pin_get kustomize_archive)"
-kustomize_archive_url="$(pin_get kustomize_archive_url)"
-kustomize_archive_sha256="$(pin_get kustomize_archive_sha256)"
-kustomize_binary_sha256="$(pin_get kustomize_binary_sha256_linux_amd64)"
-kubeconform_version="$(pin_get kubeconform_version)"
-kubeconform_archive="$(pin_get kubeconform_archive)"
-kubeconform_archive_url="$(pin_get kubeconform_archive_url)"
-kubeconform_archive_sha256="$(pin_get kubeconform_archive_sha256)"
-kubeconform_binary_sha256="$(pin_get kubeconform_binary_sha256_linux_amd64)"
-k8s_version="$(pin_get kubernetes_schema_version)"
-
-[[ -n "$kustomize_version" && -n "$kustomize_archive_sha256" ]] || fail "kustomize pins missing"
-[[ -n "$kubeconform_version" && -n "$kubeconform_archive_sha256" ]] || fail "kubeconform pins missing"
-[[ -n "$k8s_version" ]] || fail "kubernetes_schema_version pin missing"
 
 sha256_file() {
   sha256sum "$1" | awk '{print $1}'
 }
+
+# Verify the three exact schema paths and recorded SHA-256 values.
+# repo_root is the tree the pin paths are relative to. Prints FAIL to stderr
+# and returns non-zero; does not exit the process (so negatives can use it).
+verify_committed_schemas() {
+  local pins_file="$1"
+  local repo_root="$2"
+  if [[ ! -f "$pins_file" ]]; then
+    printf 'FAIL missing pin file %s\n' "$pins_file" >&2
+    return 1
+  fi
+  local ns_path app_path proj_path ns_sha app_sha proj_sha
+  ns_path="$(pin_get_from "$pins_file" kubernetes_namespace_schema_path)"
+  app_path="$(pin_get_from "$pins_file" argocd_application_schema_path)"
+  proj_path="$(pin_get_from "$pins_file" argocd_appproject_schema_path)"
+  ns_sha="$(pin_get_from "$pins_file" kubernetes_namespace_schema_sha256)"
+  app_sha="$(pin_get_from "$pins_file" argocd_application_schema_sha256)"
+  proj_sha="$(pin_get_from "$pins_file" argocd_appproject_schema_sha256)"
+  if [[ -z "$ns_path" || -z "$app_path" || -z "$proj_path" ]]; then
+    printf 'FAIL pin file missing schema path keys: %s\n' "$pins_file" >&2
+    return 1
+  fi
+  if [[ -z "$ns_sha" || -z "$app_sha" || -z "$proj_sha" ]]; then
+    printf 'FAIL pin file missing schema sha256 keys: %s\n' "$pins_file" >&2
+    return 1
+  fi
+  local rel f got
+  for rel in "$ns_path" "$app_path" "$proj_path"; do
+    case "$rel" in
+      gitops/schemas/*) ;;
+      *)
+        printf 'FAIL schema path escapes gitops/schemas/: %s\n' "$rel" >&2
+        return 1
+        ;;
+    esac
+    f="${repo_root}/${rel}"
+    if [[ ! -f "$f" ]]; then
+      printf 'FAIL missing required schema %s\n' "$rel" >&2
+      return 1
+    fi
+  done
+  f="${repo_root}/${ns_path}"
+  got="$(sha256_file "$f")"
+  if [[ "$got" != "$ns_sha" ]]; then
+    printf 'FAIL schema hash mismatch %s: got %s want %s\n' "$ns_path" "$got" "$ns_sha" >&2
+    return 1
+  fi
+  f="${repo_root}/${app_path}"
+  got="$(sha256_file "$f")"
+  if [[ "$got" != "$app_sha" ]]; then
+    printf 'FAIL schema hash mismatch %s: got %s want %s\n' "$app_path" "$got" "$app_sha" >&2
+    return 1
+  fi
+  f="${repo_root}/${proj_path}"
+  got="$(sha256_file "$f")"
+  if [[ "$got" != "$proj_sha" ]]; then
+    printf 'FAIL schema hash mismatch %s: got %s want %s\n' "$proj_path" "$got" "$proj_sha" >&2
+    return 1
+  fi
+  return 0
+}
+
+assert_nonzero_schema_check() {
+  local desc="$1"
+  local pins_file="$2"
+  local repo_root="$3"
+  local out code
+  set +e
+  out="$(verify_committed_schemas "$pins_file" "$repo_root" 2>&1)"
+  code=$?
+  set -e
+  printf '%s\n' "$out"
+  if [[ "$code" -eq 0 ]]; then
+    printf 'FAIL %s: wanted non-zero, got 0\n' "$desc" >&2
+    exit 1
+  fi
+  printf 'ok negative %s (exit %s)\n' "$desc" "$code"
+}
+
+[[ -f "$pins" ]] || fail "missing ${pins}"
+
+k8s_version="$(pin_get_from "$pins" kubernetes_schema_version)"
+[[ -n "$k8s_version" ]] || fail "kubernetes_schema_version pin missing"
+
+if ! verify_committed_schemas "$pins" "$root"; then
+  fail "committed schema path or SHA-256 check failed"
+fi
+printf 'ok committed schema paths and SHA-256 (namespace, application, appproject)\n'
+
+neg_root="$root/testdata/gitops-validate-negatives"
+[[ -d "$neg_root/missing-pin-file" ]] || fail "missing negative fixture testdata/gitops-validate-negatives/missing-pin-file"
+[[ -d "$neg_root/missing-application-schema" ]] || fail "missing negative fixture testdata/gitops-validate-negatives/missing-application-schema"
+assert_nonzero_schema_check 'missing pin file' \
+  "$neg_root/missing-pin-file/GITOPS_PINS.md" \
+  "$neg_root/missing-pin-file"
+assert_nonzero_schema_check 'missing individual required schema' \
+  "$neg_root/missing-application-schema/GITOPS_PINS.md" \
+  "$neg_root/missing-application-schema"
+
+kustomize_version="$(pin_get_from "$pins" kustomize_version)"
+kustomize_archive="$(pin_get_from "$pins" kustomize_archive)"
+kustomize_archive_url="$(pin_get_from "$pins" kustomize_archive_url)"
+kustomize_archive_sha256="$(pin_get_from "$pins" kustomize_archive_sha256)"
+kustomize_binary_sha256="$(pin_get_from "$pins" kustomize_binary_sha256_linux_amd64)"
+kubeconform_version="$(pin_get_from "$pins" kubeconform_version)"
+kubeconform_archive="$(pin_get_from "$pins" kubeconform_archive)"
+kubeconform_archive_url="$(pin_get_from "$pins" kubeconform_archive_url)"
+kubeconform_archive_sha256="$(pin_get_from "$pins" kubeconform_archive_sha256)"
+kubeconform_binary_sha256="$(pin_get_from "$pins" kubeconform_binary_sha256_linux_amd64)"
+
+[[ -n "$kustomize_version" && -n "$kustomize_archive_sha256" ]] || fail "kustomize pins missing"
+[[ -n "$kubeconform_version" && -n "$kubeconform_archive_sha256" ]] || fail "kubeconform pins missing"
 
 install_pinned_binary() {
   local name="$1"
@@ -71,8 +153,6 @@ install_pinned_binary() {
   local url="$3"
   local archive_sha="$4"
   local binary_sha="$5"
-  local version_flag="$6"
-  local want_version="$7"
   mkdir -p "$cache_dir"
   local dest="$cache_dir/$name"
   if [[ -x "$dest" ]]; then
@@ -95,7 +175,7 @@ install_pinned_binary() {
       printf 'FAIL %s archive sha256 mismatch: got %s want %s\n' "$name" "$got" "$archive_sha" >&2
       exit 1
     fi
-    tar -xzf "$archive" "$name"
+    tar --no-same-owner -xzf "$archive" "$name"
     got_bin="$(sha256_file "$name")"
     if [[ "$got_bin" != "$binary_sha" ]]; then
       printf 'FAIL %s binary sha256 mismatch: got %s want %s\n' "$name" "$got_bin" "$binary_sha" >&2
@@ -108,9 +188,9 @@ install_pinned_binary() {
 }
 
 install_pinned_binary kustomize "$kustomize_archive" "$kustomize_archive_url" \
-  "$kustomize_archive_sha256" "$kustomize_binary_sha256" version "v${kustomize_version}"
+  "$kustomize_archive_sha256" "$kustomize_binary_sha256"
 install_pinned_binary kubeconform "$kubeconform_archive" "$kubeconform_archive_url" \
-  "$kubeconform_archive_sha256" "$kubeconform_binary_sha256" -v "v${kubeconform_version}"
+  "$kubeconform_archive_sha256" "$kubeconform_binary_sha256"
 
 export PATH="$cache_dir:$PATH"
 

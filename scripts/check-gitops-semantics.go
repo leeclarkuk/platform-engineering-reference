@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -25,6 +26,8 @@ const (
 	rootAppName = "gitops-root"
 	projBoot    = "bootstrap"
 	projPlat    = "platform"
+	argoGroup   = "argoproj.io"
+	kindApp     = "Application"
 )
 
 var requiredFixtures = []string{
@@ -39,6 +42,10 @@ var requiredFixtures = []string{
 	"source-path-templates",
 	"iam-under-gitops",
 	"terraform-under-gitops",
+	"privilege-broadening",
+	"extra-namespace",
+	"wrong-metadata-namespace",
+	"malformed-yaml",
 }
 
 type object struct {
@@ -56,7 +63,7 @@ func main() {
 		fail("working directory: %v", err)
 	}
 	live := filepath.Join(root, "gitops")
-	if err := checkTree(live, true); err != nil {
+	if err := checkTree(live); err != nil {
 		fail("live gitops/: %v", err)
 	}
 	fmt.Println("ok live gitops/ semantic checks")
@@ -73,7 +80,7 @@ func main() {
 		}
 		seen[ent.Name()] = true
 		path := filepath.Join(fixRoot, ent.Name())
-		err := checkTree(path, false)
+		err := checkTree(path)
 		if err == nil {
 			fail("fixture %s: wanted non-zero, got pass", ent.Name())
 		}
@@ -92,7 +99,7 @@ func fail(format string, args ...any) {
 	os.Exit(1)
 }
 
-func checkTree(dir string, live bool) error {
+func checkTree(dir string) error {
 	if st, err := os.Stat(dir); err != nil || !st.IsDir() {
 		return fmt.Errorf("missing directory %s", dir)
 	}
@@ -128,11 +135,10 @@ func checkTree(dir string, live bool) error {
 		return fmt.Errorf("terraform under gitops (%s)", strings.Join(tfHits, ", "))
 	}
 
+	var namespaces []object
 	var apps []object
 	var projects []object
-	bootCount := 0
-	platCount := 0
-	var boot, plat, rootApp *object
+	var boot, plat *object
 
 	for i := range objs {
 		o := &objs[i]
@@ -142,29 +148,48 @@ func checkTree(dir string, live bool) error {
 		switch o.Kind {
 		case "Kustomization":
 			continue
+		case "Namespace":
+			namespaces = append(namespaces, *o)
 		case "Application":
 			apps = append(apps, *o)
 		case "AppProject":
 			projects = append(projects, *o)
 			switch o.Name {
 			case projBoot:
-				bootCount++
 				boot = o
 			case projPlat:
-				platCount++
 				plat = o
 			}
+		case "":
+			return fmt.Errorf("object missing kind in %s", o.Source)
+		default:
+			return fmt.Errorf("unexpected kind %s (%s/%s) in %s", o.Kind, o.APIVersion, o.Name, o.Source)
 		}
 		if err := rejectWildcards(o); err != nil {
 			return err
 		}
 	}
 
-	if bootCount != 1 || boot == nil {
-		return fmt.Errorf("want exactly one AppProject named bootstrap, got %d", bootCount)
+	if len(namespaces) != 2 {
+		return fmt.Errorf("want exactly two Namespace objects (argocd, apps), got %d", len(namespaces))
 	}
-	if platCount != 1 || plat == nil {
-		return fmt.Errorf("want exactly one AppProject named platform, got %d", platCount)
+	nsNames := []string{namespaces[0].Name, namespaces[1].Name}
+	sort.Strings(nsNames)
+	if nsNames[0] != nsApps || nsNames[1] != nsArgocd {
+		return fmt.Errorf("namespaces must be exactly argocd and apps, got %q and %q", namespaces[0].Name, namespaces[1].Name)
+	}
+
+	if len(projects) != 2 {
+		return fmt.Errorf("want exactly two AppProjects (bootstrap, platform), got %d", len(projects))
+	}
+	if boot == nil || plat == nil {
+		return fmt.Errorf("want AppProjects named bootstrap and platform")
+	}
+	if boot.Namespace != nsArgocd {
+		return fmt.Errorf("AppProject bootstrap metadata.namespace %q, want argocd", boot.Namespace)
+	}
+	if plat.Namespace != nsArgocd {
+		return fmt.Errorf("AppProject platform metadata.namespace %q, want argocd", plat.Namespace)
 	}
 	if err := checkProject(boot, projBoot, nsArgocd, nsApps); err != nil {
 		return err
@@ -173,58 +198,47 @@ func checkTree(dir string, live bool) error {
 		return err
 	}
 
-	var bootApps []object
-	var platApps []object
-	for i := range apps {
-		a := apps[i]
-		proj := mapString(mapOf(a.Raw["spec"]), "project")
-		path := sourcePath(a)
-		if path == pathTpl || strings.HasPrefix(path, pathTpl+"/") {
-			return fmt.Errorf("Application %s source path %q is forbidden", a.Name, path)
-		}
-		destNS := destNamespace(a)
-		if destNS != nsArgocd && destNS != nsApps {
-			return fmt.Errorf("Application %s destination namespace %q is unlisted", a.Name, destNS)
-		}
-		switch proj {
-		case projBoot:
-			bootApps = append(bootApps, a)
-		case projPlat:
-			platApps = append(platApps, a)
-			if destNS == nsArgocd {
-				return fmt.Errorf("privilege inversion: Application %s uses project platform to destination argocd", a.Name)
-			}
-		default:
-			return fmt.Errorf("Application %s uses unknown project %q", a.Name, proj)
-		}
-		if a.Name == rootAppName {
-			cp := a
-			rootApp = &cp
-		}
+	if len(apps) != 1 {
+		return fmt.Errorf("want exactly one Application (gitops-root), got %d", len(apps))
+	}
+	rootApp := apps[0]
+	if rootApp.Name != rootAppName {
+		return fmt.Errorf("Application name %q, want %s", rootApp.Name, rootAppName)
+	}
+	if rootApp.Namespace != nsArgocd {
+		return fmt.Errorf("gitops-root metadata.namespace %q, want argocd", rootApp.Namespace)
 	}
 
-	if len(bootApps) != 1 {
-		return fmt.Errorf("bootstrap project must be used only by Application gitops-root (found %d)", len(bootApps))
+	proj := mapString(mapOf(rootApp.Raw["spec"]), "project")
+	path := sourcePath(rootApp)
+	if path == pathTpl || strings.HasPrefix(path, pathTpl+"/") {
+		return fmt.Errorf("Application %s source path %q is forbidden", rootApp.Name, path)
 	}
-	if bootApps[0].Name != rootAppName {
-		return fmt.Errorf("bootstrap project used by Application %s, want gitops-root", bootApps[0].Name)
+	destNS := destNamespace(rootApp)
+	if destNS != nsArgocd && destNS != nsApps {
+		return fmt.Errorf("Application %s destination namespace %q is unlisted", rootApp.Name, destNS)
 	}
-	if rootApp == nil {
-		return fmt.Errorf("missing Application gitops-root")
+	if proj != projBoot {
+		if proj == projPlat && destNS == nsArgocd {
+			return fmt.Errorf("privilege inversion: Application %s uses project platform to destination argocd", rootApp.Name)
+		}
+		if proj == projPlat {
+			return fmt.Errorf("no Milestone 3 Application may use project platform")
+		}
+		return fmt.Errorf("Application %s uses unknown project %q", rootApp.Name, proj)
 	}
-	if err := checkRootApp(*rootApp); err != nil {
-		return err
+	if destNS != nsArgocd {
+		return fmt.Errorf("gitops-root destination.namespace %q, want %s", destNS, nsArgocd)
 	}
-	if len(platApps) != 0 {
-		return fmt.Errorf("no Milestone 3 Application may use project platform (found %d, including %s)", len(platApps), platApps[0].Name)
-	}
-	_ = live
-	return nil
+	return checkRootApp(rootApp)
 }
 
 func checkRootApp(o object) error {
 	if o.Name != rootAppName {
 		return fmt.Errorf("root Application name %q, want %s", o.Name, rootAppName)
+	}
+	if o.Namespace != nsArgocd {
+		return fmt.Errorf("gitops-root metadata.namespace %q, want argocd", o.Namespace)
 	}
 	spec := mapOf(o.Raw["spec"])
 	if spec == nil {
@@ -280,6 +294,35 @@ func checkProject(o *object, name, allowNS, forbidNS string) error {
 	}
 	if dests[0].namespace == forbidNS {
 		return fmt.Errorf("AppProject %s must not destination %s", name, forbidNS)
+	}
+	if name == projBoot {
+		if err := checkBootstrapWhitelist(spec); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func checkBootstrapWhitelist(spec map[string]any) error {
+	raw, ok := spec["namespaceResourceWhitelist"]
+	if !ok {
+		return fmt.Errorf("AppProject bootstrap missing namespaceResourceWhitelist (must be exactly argoproj.io/Application)")
+	}
+	items, ok := raw.([]any)
+	if !ok {
+		return fmt.Errorf("AppProject bootstrap namespaceResourceWhitelist must be a sequence")
+	}
+	if len(items) != 1 {
+		return fmt.Errorf("AppProject bootstrap namespaceResourceWhitelist must be exactly argoproj.io/Application (got %d entries)", len(items))
+	}
+	m := mapOf(items[0])
+	group := mapString(m, "group")
+	kind := mapString(m, "kind")
+	if strings.Contains(group, "*") || strings.Contains(kind, "*") {
+		return fmt.Errorf("AppProject bootstrap namespaceResourceWhitelist contains a wildcard")
+	}
+	if group != argoGroup || kind != kindApp {
+		return fmt.Errorf("AppProject bootstrap namespaceResourceWhitelist must be exactly argoproj.io/Application (got %s/%s)", group, kind)
 	}
 	return nil
 }
@@ -337,6 +380,14 @@ func rejectWildcards(o *object) error {
 	src := mapOf(spec["source"])
 	if strings.Contains(mapString(src, "repoURL"), "*") {
 		return fmt.Errorf("%s/%s repoURL contains a wildcard", o.Kind, o.Name)
+	}
+	if wl, ok := spec["namespaceResourceWhitelist"].([]any); ok {
+		for _, item := range wl {
+			m := mapOf(item)
+			if strings.Contains(mapString(m, "group"), "*") || strings.Contains(mapString(m, "kind"), "*") {
+				return fmt.Errorf("%s/%s namespaceResourceWhitelist contains a wildcard", o.Kind, o.Name)
+			}
+		}
 	}
 	return nil
 }

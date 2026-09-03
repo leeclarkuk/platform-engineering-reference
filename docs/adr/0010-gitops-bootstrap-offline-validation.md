@@ -32,23 +32,35 @@ Accepted because Lee approved this specification.
   Destinations are in-cluster server `https://kubernetes.default.svc`
   and namespace `argocd` only. It must not destination `apps`. It is
   used only by Application `gitops-root`.
+  `namespaceResourceWhitelist` is exactly `argoproj.io`/`Application`.
+  That stops `gitops-root` from deploying arbitrary namespaced resources
+  into `argocd`.
 * AppProject `platform` is unprivileged. Same `sourceRepos`. Destinations
   are the same server and namespace `apps` only. It must not destination
   `argocd`. No Milestone 3 Application uses it.
 * Application `gitops-root` has `metadata.name` `gitops-root`,
-  `spec.project` `bootstrap`, `repoURL` this repository,
-  `targetRevision` `main`, `path` `gitops/apps`, destination in-cluster
-  namespace `argocd`. `spec.syncPolicy` is omitted: no automated sync,
-  prune, or selfHeal.
+  `metadata.namespace` `argocd`, `spec.project` `bootstrap`, `repoURL`
+  this repository, `targetRevision` `main`, `path` `gitops/apps`,
+  destination in-cluster namespace `argocd`. `spec.syncPolicy` is
+  omitted: no automated sync, prune, or selfHeal. Both AppProjects also
+  have `metadata.namespace` `argocd`.
+* The live `gitops/` tree is exactly two Namespace objects (`argocd` and
+  `apps`), two AppProjects (`bootstrap` and `platform`), and one
+  Application (`gitops-root`). A third Namespace, an extra Application,
+  or an unexpected kind fails the semantic gate.
 * Wildcards (`*`) in `sourceRepos`, destination namespaces, or
   destinations fail the semantic gate.
-* `make gitops-validate` fails closed if `gitops/schemas/kubernetes` or
-  `gitops/schemas/argocd` is missing or empty; runs `kustomize build`
-  for `gitops` and `gitops/apps`; runs kubeconform on those renders with
-  only `-schema-location` under `gitops/schemas/` (no remote schema
-  URLs, no `--ignore-missing-schemas` for `argoproj.io` or Namespace);
-  and runs `scripts/check-gitops-semantics.sh` against the live tree and
-  committed fixtures under `testdata/gitops-boundaries/`.
+* `make gitops-validate` fails closed unless the three committed schema
+  files exist at the exact paths recorded in `gitops/GITOPS_PINS.md` and
+  their SHA-256 matches (Application schema drift fails CI). It then
+  runs `kustomize build` for `gitops` and `gitops/apps`; kubeconform on
+  those renders with only `-schema-location` under `gitops/schemas/`
+  (no remote schema URLs, no `--ignore-missing-schemas` for
+  `argoproj.io` or Namespace); and `scripts/check-gitops-semantics.sh`
+  against the live tree and committed fixtures under
+  `testdata/gitops-boundaries/`. Pin-file and individual-schema
+  negatives under `testdata/gitops-validate-negatives/` are executed by
+  the same target.
 * Pins for kustomize, kubeconform, GitHub Action SHAs, Kubernetes schema
   version, and Argo CD schema version are recorded in
   `gitops/GITOPS_PINS.md` from published or computed SHA-256 evidence.
@@ -70,7 +82,8 @@ Accepted because Lee approved this specification.
 
 * Auto-sync, prune, or selfHeal on `gitops-root`.
 * Wildcard `sourceRepos` or destination namespaces.
-* Platform project managing `argocd` or bootstrap objects.
+* Unrestricted AppProject `bootstrap` namespaced resources (missing or
+  broader `namespaceResourceWhitelist` than `argoproj.io`/`Application`).
 * Bootstrap project destination `apps`.
 * Application source path `templates/`.
 * Remote kubeconform schema URLs, or `--ignore-missing-schemas` for
