@@ -21,8 +21,10 @@ Milestone 0 single-PR rule is closed (PR #1 merged). Milestone 1 is this one
 new pull request. Do not open a second PR for this layer. Do not merge
 without Lee.
 
-`platform-product-builder` owns product docs only. It does **not** own
-`AGENTS.md`.
+`platform-product-builder` owns the authorised Milestone 1
+implementation paths listed in the team table. It does **not** own
+`AGENTS.md`, `.cursor/agents/`, Makefile integration, or
+`.github/workflows/`.
 
 ## Model policy
 
@@ -44,7 +46,7 @@ fallback as the operating mode.
 | Agent | Role | Write? | Path ownership |
 | --- | --- | --- | --- |
 | `specification-architect` | Spec-first architecture gate before implementation | Read-only | none |
-| `platform-product-builder` | Claims, README, gap assessment | Write | `README.md`, `docs/product/` only (not `AGENTS.md`) |
+| `platform-product-builder` | Claims, README, gap assessment, and authorised M1 implementation | Write | `api/`, `cmd/`, `internal/`, `templates/`, `testdata/`, `go.mod`, `go.sum`, `README.md`, `docs/product/` (not `AGENTS.md`, `.cursor/agents/`, `Makefile`, or `.github/workflows/`) |
 | `aws-foundations-builder` | AWS foundations later | Dormant; refuse writes outside later `infra/aws/` | future `infra/aws/` only |
 | `gitops-golden-path-builder` | GitOps later | Dormant; refuse writes outside later `gitops/` | future `gitops/` |
 | `reliability-security-reviewer` | Process-isolated review of ignore rules, pin, CI, secrets | Read-only | none |
@@ -73,8 +75,8 @@ a chart skeleton on disk, not a GitOps apply.
 Allowed: `README.md`, `AGENTS.md`, `Makefile`, `.gitignore`,
 `.github/workflows/`, `.github/dependabot.yml`, `.cursor/agents/`,
 `docs/adr/`, `docs/product/`, `.friction/`, `scripts/`, `api/`, `cmd/`,
-`templates/`, `testdata/`, `go.mod`, `go.sum`. Do not change `LICENSE`.
-Do not stage secret files in the repository.
+`internal/`, `templates/`, `testdata/`, `go.mod`, `go.sum`. Do not
+change `LICENSE`. Do not stage secret files in the repository.
 
 Forbidden: `infra/`, `terraform/`, `landing-zones/`, `gitops/`,
 `kubernetes/` (except Helm files under `templates/`), `examples/`,

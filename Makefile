@@ -42,7 +42,7 @@ doctor: ## Check required local tools (no cloud credentials, no AWS)
 		printf 'opt gitleaks not found (CI installs a checksum-pinned binary)\n'; \
 	fi; \
 	if command -v frictionctl >/dev/null 2>&1; then \
-		printf 'opt frictionctl (%s) — journeys are not proved in Milestone 0\n' "$$(command -v frictionctl)"; \
+		printf 'opt frictionctl (%s); journeys are not proved\n' "$$(command -v frictionctl)"; \
 	else \
 		printf 'opt frictionctl not found (pin recorded in .friction/; journeys not proved)\n'; \
 	fi; \

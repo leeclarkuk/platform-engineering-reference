@@ -30,9 +30,11 @@ boundary.
   `spec.serviceAccount.name`. JSON Schema pattern
   `^[a-z0-9]([-a-z0-9]*[a-z0-9])?$` with `maxLength` 63.
   `platform create` rejects invalid names such as `Demo`.
-* The CLI is stdlib only (`flag`, `os`, no Cobra): `platform doctor`,
-  `platform validate <file>`, `platform create --name --owner
-  --namespace [--out-dir DIR]`.
+* Command parsing uses the Go standard library flag package. The CLI
+  avoids Cobra. Contract parsing and validation use the pinned yaml.v3
+  and jsonschema/v5 dependencies recorded in go.mod and go.sum.
+  Commands are `platform doctor`, `platform validate <file>`, and
+  `platform create --name --owner --namespace [--out-dir DIR]`.
 * `platform doctor` requires `git`, `make`, and `go`. It must succeed
   with `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`,
   `AWS_SESSION_TOKEN`, and `AWS_PROFILE` unset. It does not read those

@@ -1,5 +1,5 @@
-# Milestone 0 local gates. No Terraform. No cloud mutation.
-name: Milestone 0
+# Platform gates (M0 and M1). No Terraform. No cloud mutation.
+name: Platform gates
 
 on:
   pull_request:
@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: m0-${{ github.workflow }}-${{ github.ref }}
+  group: platform-gates-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:

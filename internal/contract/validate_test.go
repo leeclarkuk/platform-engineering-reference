@@ -1,6 +1,7 @@
 package contract
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -204,5 +205,44 @@ func TestCreateFailsIfDirExists(t *testing.T) {
 		OutDir:    dir,
 	}); err == nil {
 		t.Fatal("expected create into an existing directory to fail")
+	}
+}
+
+func TestCreateHelmSkeletonMatchesRepo(t *testing.T) {
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("runtime.Caller failed")
+	}
+	repoRoot := filepath.Join(filepath.Dir(file), "..", "..")
+	outDir := filepath.Join(t.TempDir(), "sample")
+	if _, err := Create(CreateOptions{
+		Name:      "sample",
+		Owner:     "platform",
+		Namespace: "apps",
+		OutDir:    outDir,
+	}); err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	rels := []string{
+		"Chart.yaml",
+		"values.yaml",
+		filepath.Join("templates", "deployment.yaml"),
+		filepath.Join("templates", "service.yaml"),
+		filepath.Join("templates", "serviceaccount.yaml"),
+	}
+	for _, rel := range rels {
+		gotPath := filepath.Join(outDir, "templates", rel)
+		wantPath := filepath.Join(repoRoot, "templates", rel)
+		got, err := os.ReadFile(gotPath)
+		if err != nil {
+			t.Fatalf("read generated %s: %v", gotPath, err)
+		}
+		want, err := os.ReadFile(wantPath)
+		if err != nil {
+			t.Fatalf("read repo %s: %v", wantPath, err)
+		}
+		if !bytes.Equal(got, want) {
+			t.Errorf("Helm skeleton drift in %s\ngenerated (%d bytes):\n%s\nrepo (%d bytes):\n%s", rel, len(got), got, len(want), want)
+		}
 	}
 }
