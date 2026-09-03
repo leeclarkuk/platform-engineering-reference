@@ -1,0 +1,47 @@
+# Local tooling
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~
+
+# Terraform state and local overrides (no AWS slice in M0; keep the net closed)
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars.local
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# Secrets and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_ed25519
+credentials
+credentials.*
+credentials.json
+service-account*.json
+kubeconfig
+kubeconfig.*
+!.kubeconfig.example
+
+# Build artefacts
+bin/
+dist/
+coverage.out
+*.log
+tmp/
+.cache/
+out/
