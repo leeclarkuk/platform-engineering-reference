@@ -38,6 +38,34 @@ func TestValidateRejectsGoldenPathKustomize(t *testing.T) {
 	}
 }
 
+func TestValidateRejectsMissingFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "does-not-exist.yaml")
+	if err := File(path); err == nil {
+		t.Fatal("expected missing file to fail validation")
+	}
+}
+
+func TestValidateRejectsWrongAPIVersion(t *testing.T) {
+	path := testdata(t, "workloadcontract-invalid-apiversion.yaml")
+	if err := File(path); err == nil {
+		t.Fatal("expected wrong apiVersion to fail validation")
+	}
+}
+
+func TestValidateRejectsWrongKind(t *testing.T) {
+	path := testdata(t, "workloadcontract-invalid-kind.yaml")
+	if err := File(path); err == nil {
+		t.Fatal("expected wrong kind to fail validation")
+	}
+}
+
+func TestValidateRejectsDNS1123Name(t *testing.T) {
+	path := testdata(t, "workloadcontract-invalid-name-dns.yaml")
+	if err := File(path); err == nil {
+		t.Fatal("expected metadata.name Demo to fail validation")
+	}
+}
+
 func TestValidateRejectsMissingName(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "missing-name.yaml")
@@ -83,7 +111,7 @@ spec:
 }
 
 func TestCreateThenValidate(t *testing.T) {
-	dir := t.TempDir()
+	dir := filepath.Join(t.TempDir(), "widget")
 	contractPath, err := Create(CreateOptions{
 		Name:      "widget",
 		Owner:     "platform",
@@ -120,5 +148,32 @@ func TestCreateThenValidate(t *testing.T) {
 func TestCreateRequiresFlags(t *testing.T) {
 	if _, err := Create(CreateOptions{Name: "x", Owner: "y"}); err == nil {
 		t.Fatal("expected create without namespace to fail")
+	}
+}
+
+func TestCreateRejectsInvalidName(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "out")
+	if _, err := Create(CreateOptions{
+		Name:      "Demo",
+		Owner:     "platform",
+		Namespace: "apps",
+		OutDir:    dir,
+	}); err == nil {
+		t.Fatal("expected create --name Demo to fail")
+	}
+	if _, err := os.Stat(dir); !os.IsNotExist(err) {
+		t.Fatalf("create must not write DIR when the name is invalid: %v", err)
+	}
+}
+
+func TestCreateFailsIfDirExists(t *testing.T) {
+	dir := t.TempDir()
+	if _, err := Create(CreateOptions{
+		Name:      "widget",
+		Owner:     "platform",
+		Namespace: "apps",
+		OutDir:    dir,
+	}); err == nil {
+		t.Fatal("expected create into an existing directory to fail")
 	}
 }

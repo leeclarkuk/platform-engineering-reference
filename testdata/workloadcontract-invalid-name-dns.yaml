@@ -1,0 +1,10 @@
+apiVersion: platform.engineering.reference/v1alpha1
+kind: WorkloadContract
+metadata:
+  name: Demo
+spec:
+  owner: platform
+  goldenPath: helm
+  serviceAccount:
+    namespace: apps
+    name: sample

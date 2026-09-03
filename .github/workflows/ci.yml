@@ -51,42 +51,8 @@ jobs:
       - name: go version
         run: go version
 
-      - name: go test
-        run: go test ./...
-
-      - name: platform CLI positive and negative
-        run: |
-          set -euo pipefail
-          go run ./cmd/platform doctor
-
-          go run ./cmd/platform validate testdata/workloadcontract-valid.yaml
-
-          set +e
-          missing_out="$(go run ./cmd/platform validate testdata/workloadcontract-invalid-missing-owner.yaml 2>&1)"
-          missing_code=$?
-          set -e
-          printf '%s\n' "$missing_out"
-          if [[ "$missing_code" -eq 0 ]]; then
-            printf 'FAIL: missing-field validate exited 0\n' >&2
-            exit 1
-          fi
-          printf 'ok missing-field validate (exit %s)\n' "$missing_code"
-
-          set +e
-          kust_out="$(go run ./cmd/platform validate testdata/workloadcontract-invalid-goldenpath-kustomize.yaml 2>&1)"
-          kust_code=$?
-          set -e
-          printf '%s\n' "$kust_out"
-          if [[ "$kust_code" -eq 0 ]]; then
-            printf 'FAIL: kustomize goldenPath validate exited 0\n' >&2
-            exit 1
-          fi
-          printf 'ok kustomize goldenPath validate (exit %s)\n' "$kust_code"
-
-          tmp="$(mktemp -d)"
-          go run ./cmd/platform create --name widget --owner platform --namespace apps --out-dir "$tmp"
-          go run ./cmd/platform validate "${tmp}/widget.yaml"
-          printf 'ok create-then-validate\n'
+      - name: make platform-test
+        run: make platform-test
 
       - name: make help
         run: make help

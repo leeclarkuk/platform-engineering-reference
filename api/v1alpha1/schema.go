@@ -9,6 +9,11 @@ const (
 	Kind = "WorkloadContract"
 	// GoldenPathHelm is the only legal spec.goldenPath value (ADR-0004).
 	GoldenPathHelm = "helm"
+	// DNS1123LabelPattern is the Kubernetes DNS-1123 label pattern used for
+	// metadata.name. Max length is 63.
+	DNS1123LabelPattern = `^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
+	// DNS1123LabelMaxLen is the maximum length of a DNS-1123 label.
+	DNS1123LabelMaxLen = 63
 )
 
 // SchemaJSON is the JSON Schema for kind WorkloadContract.

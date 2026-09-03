@@ -15,7 +15,7 @@ OUT_DIR ?=
 
 .PHONY: help doctor check-prohibited check-prohibited-stdin0 \
 	check-m0-assertions check-no-cloud-mutation friction-pin-verify \
-	platform-doctor platform-validate platform-create test
+	platform-doctor platform-validate platform-create platform-test test
 
 help: ## Show available targets
 	@awk 'BEGIN {FS = ":.*##"; printf "\nTargets:\n"} \
@@ -171,3 +171,6 @@ platform-create: ## Write a WorkloadContract and Helm skeleton (NAME OWNER NAMES
 
 test: ## Run Go unit tests
 	go test ./...
+
+platform-test: ## Run Go tests and CLI positive/negative checks
+	@scripts/platform-test.sh

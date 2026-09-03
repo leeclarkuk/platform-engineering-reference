@@ -24,6 +24,7 @@ gates that need no cloud credentials:
 * agent operating model (Grok-only, process-isolated review; M0 single-PR
   closed; M1 is one new PR)
 * `make help` and `make doctor`
+* `make platform-test` (Go tests plus CLI positive/negative checks)
 * `platform doctor`, `platform validate`, and `platform create` (local CLI)
 * a WorkloadContract JSON Schema with valid and invalid fixtures
 * one Helm chart skeleton under `templates/` (files on disk, not a deploy)
@@ -39,21 +40,21 @@ That is all. No cluster, no account, no live workload path, no live traffic.
 ```bash
 make help && make doctor
 make check-prohibited
-go test ./...
-go run ./cmd/platform doctor
-go run ./cmd/platform validate testdata/workloadcontract-valid.yaml
+make platform-test
 make friction-pin-verify
 ```
 
 `make help` lists the real targets. `make doctor` checks required local
 tools (`git`, `make`). It does not call AWS. It does not need credentials.
-`platform doctor` additionally requires `go`. It does not call AWS.
+`platform doctor` additionally requires `go`. It succeeds with AWS
+credential environment variables unset. It does not call AWS.
+`make platform-test` runs `go test ./...` and CLI positive/negative checks.
 `make friction-pin-verify` uses `go mod download -json` (not a sumdb curl)
 and does not run journeys.
 
-CI on pull requests runs those gates, Go tests, CLI positive and negative
-cases, a negative doctor case, the prohibited-path stdin0 suite, targeted
-operating-model assertions, and a Gitleaks scan. CI does not run Terraform.
+CI on pull requests runs those gates, `make platform-test`, a negative
+doctor case, the prohibited-path stdin0 suite, targeted operating-model
+assertions, and a Gitleaks scan. CI does not run Terraform.
 
 ## What costs money
 
@@ -66,7 +67,7 @@ slice and someone applies it on purpose.
 | Item | Status |
 | --- | --- |
 | Product claims and gap assessment | Written; locally readable |
-| ADRs for source of truth, ownership, AWS-first, Helm-only golden path, exclusions, frictionctl pin, agent operating model | Written (0001-0005 remain Accepted) |
+| ADRs for source of truth, ownership, AWS-first, Helm-only golden path, exclusions, frictionctl pin, agent operating model, platform contract and CLI | Written (0001-0005 remain Accepted; 0008 is this milestone) |
 | `make help` / `make doctor` | Locally proved |
 | `platform doctor` / `platform validate` / `platform create` | Locally proved when those commands are run |
 | WorkloadContract schema and fixtures | Locally proved by `go test` and `platform validate` |
@@ -101,6 +102,7 @@ cd platform-engineering-reference
 make help && make doctor
 go run ./cmd/platform doctor
 go run ./cmd/platform validate testdata/workloadcontract-valid.yaml
+make platform-test
 ```
 
 ## Licence

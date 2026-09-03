@@ -94,8 +94,8 @@ later `infra/aws/` and `gitops/`.
 * Spec and Lee approval before implementation.
 * `make help`, `make doctor`, `make check-prohibited`,
   `make friction-pin-verify` (no cloud credentials).
-* `go test ./...`, `platform doctor`, `platform validate`,
-  `platform create` (local; no AWS).
+* `make platform-test` (`go test ./...` plus CLI positive/negative
+  checks; `platform doctor` with AWS credential env unset).
 * Secret scan in CI. Executable files under `.github/workflows/`,
   `Makefile`, and `scripts/` must not contain runnable Terraform/OpenTofu
   apply or destroy, `kubectl apply`, or Helm install/upgrade.

@@ -4,12 +4,15 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"gopkg.in/yaml.v3"
 
 	v1alpha1 "github.com/leeclarkuk/platform-engineering-reference/api/v1alpha1"
 )
+
+var dns1123Label = regexp.MustCompile(v1alpha1.DNS1123LabelPattern)
 
 type workloadContract struct {
 	APIVersion string `yaml:"apiVersion"`
@@ -44,10 +47,19 @@ func Create(opts CreateOptions) (contractPath string, err error) {
 	if name == "" || owner == "" || namespace == "" {
 		return "", fmt.Errorf("create requires --name, --owner and --namespace")
 	}
-	outDir := opts.OutDir
-	if outDir == "" {
-		outDir = "."
+	if !validDNS1123Label(name) {
+		return "", fmt.Errorf("--name %q is not a DNS-1123 label (lowercase letters, digits, hyphens)", name)
 	}
+	outDir := strings.TrimSpace(opts.OutDir)
+	if outDir == "" {
+		return "", fmt.Errorf("create requires an output directory")
+	}
+	if _, err := os.Stat(outDir); err == nil {
+		return "", fmt.Errorf("directory already exists: %s", outDir)
+	} else if !os.IsNotExist(err) {
+		return "", err
+	}
+
 	if err := os.MkdirAll(outDir, 0o755); err != nil {
 		return "", err
 	}
@@ -111,6 +123,13 @@ serviceAccount:
 		}
 	}
 	return nil
+}
+
+func validDNS1123Label(s string) bool {
+	if len(s) == 0 || len(s) > v1alpha1.DNS1123LabelMaxLen {
+		return false
+	}
+	return dns1123Label.MatchString(s)
 }
 
 // Helm templates use Helm actions. They are files on disk, not a deploy.

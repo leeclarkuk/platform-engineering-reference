@@ -11,6 +11,15 @@ import (
 // still checks git and make only; this list additionally requires go.
 var RequiredTools = []string{"git", "make", "go"}
 
+// AWSCredentialEnvVars are never read. platform doctor must succeed when
+// they are unset and must not call AWS.
+var AWSCredentialEnvVars = []string{
+	"AWS_ACCESS_KEY_ID",
+	"AWS_SECRET_ACCESS_KEY",
+	"AWS_SESSION_TOKEN",
+	"AWS_PROFILE",
+}
+
 // Result is the local-tool check outcome. It never inspects cloud
 // credentials and never calls AWS.
 type Result struct {

@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/leeclarkuk/platform-engineering-reference/internal/contract"
 	"github.com/leeclarkuk/platform-engineering-reference/internal/doctor"
@@ -38,9 +39,12 @@ Usage:
   platform validate <file>
   platform create --name NAME --owner OWNER --namespace NAMESPACE [--out-dir DIR]
 
-doctor checks git, make and go. It does not call AWS.
+doctor checks git, make and go. It does not call AWS. It succeeds with
+AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN and
+AWS_PROFILE unset.
 validate loads YAML and checks it against the WorkloadContract JSON Schema.
-create writes a WorkloadContract YAML and a Helm chart skeleton. It writes
+create writes a WorkloadContract YAML and a Helm chart skeleton into DIR.
+DIR must not already exist. --name must be a DNS-1123 label. It writes
 no Terraform, GitOps, IAM, kubeconfig or secrets.
 `)
 }
@@ -77,14 +81,26 @@ func runValidate(args []string) int {
 func runCreate(args []string) int {
 	fs := flag.NewFlagSet("create", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
-	name := fs.String("name", "", "workload name (metadata.name and ServiceAccount name)")
+	name := fs.String("name", "", "workload name (DNS-1123; metadata.name and ServiceAccount name)")
 	owner := fs.String("owner", "", "workload owner")
 	namespace := fs.String("namespace", "", "ServiceAccount namespace (ADR-0002 contract string)")
-	outDir := fs.String("out-dir", ".", "directory for the contract YAML and templates/ Helm skeleton")
+	outDir := fs.String("out-dir", "", "output directory (must not already exist)")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
-	if fs.NArg() != 0 {
+	dir := *outDir
+	switch fs.NArg() {
+	case 0:
+		if dir == "" {
+			dir = strings.TrimSpace(*name)
+		}
+	case 1:
+		if dir != "" {
+			fmt.Fprintln(os.Stderr, "create: pass DIR as --out-dir or as a positional argument, not both")
+			return 2
+		}
+		dir = fs.Arg(0)
+	default:
 		fmt.Fprintln(os.Stderr, "usage: platform create --name NAME --owner OWNER --namespace NAMESPACE [--out-dir DIR]")
 		return 2
 	}
@@ -92,12 +108,12 @@ func runCreate(args []string) int {
 		Name:      *name,
 		Owner:     *owner,
 		Namespace: *namespace,
-		OutDir:    *outDir,
+		OutDir:    dir,
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "create: %v\n", err)
 		return 1
 	}
-	fmt.Printf("ok wrote %s and Helm skeleton under %s/templates\n", path, *outDir)
+	fmt.Printf("ok wrote %s and Helm skeleton under %s/templates\n", path, dir)
 	return 0
 }
