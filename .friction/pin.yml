@@ -1,0 +1,18 @@
+# frictionctl pin for this repository.
+# Journeys are NOT proved. Do not treat this file as SLO evidence.
+# These are Go module and go.mod checksums, NOT a released executable checksum.
+# Module tag is v0.1.0. Executable `frictionctl version` is exactly 0.1.0.
+# checksum_source documents the sumdb lookup URL; proof is go mod download -json.
+
+tool: frictionctl
+module: github.com/leeclarkuk/frictionctl
+package: github.com/leeclarkuk/frictionctl/cmd/frictionctl
+repository: https://github.com/leeclarkuk/frictionctl
+version: v0.1.0
+commit: 79398cfb55bcc253045bb0065a342a8fe805549a
+binary_version: "0.1.0"
+sum: h1:0OsjkfZdCZ4cC5ZxBKO+0jitMA0ibgOjpBxktis4nXs=
+gomod_sum: h1:umKtP9G90EU8dyMvsvwOkXpnkArZOVhMqrmhbwXF18U=
+checksum_source: https://sum.golang.org/lookup/github.com/leeclarkuk/frictionctl@v0.1.0
+install: go install github.com/leeclarkuk/frictionctl/cmd/frictionctl@v0.1.0
+journeys_proved: false

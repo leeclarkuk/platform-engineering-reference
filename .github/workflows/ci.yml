@@ -1,0 +1,106 @@
+# Milestone 0 local gates. No Terraform. No cloud mutation.
+name: Milestone 0
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: m0-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gates:
+    name: help, doctor, pin, prohibited files, secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Record SHA evidence
+        run: |
+          set -euo pipefail
+          # Do not read workflow_run head_sha here. That field is not populated on pull_request. Collect workflow-run API head_sha externally for the review hand-off and compare it with the reviewed PR head.
+          reviewed_pr_head_sha='${{ github.event.pull_request.head.sha }}'
+          github_sha='${{ github.sha }}'
+          event_base_sha='${{ github.event.pull_request.base.sha }}'
+          git_head="$(git rev-parse HEAD)"
+          printf 'event_name=%s\n' '${{ github.event_name }}'
+          printf 'github.ref=%s\n' '${{ github.ref }}'
+          printf 'reviewed PR head SHA=%s\n' "${reviewed_pr_head_sha:-n/a}"
+          printf 'event checkout SHA (github.sha)=%s\n' "${github_sha}"
+          printf 'event base SHA=%s\n' "${event_base_sha:-n/a}"
+          printf 'git rev-parse HEAD actually tested=%s\n' "${git_head}"
+          if [[ -n "${reviewed_pr_head_sha}" && "${git_head}" != "${reviewed_pr_head_sha}" ]]; then
+            printf 'synthetic merge SHA=%s (HEAD is the merge commit, not the PR branch head)\n' "${git_head}"
+          fi
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.22.12'
+          cache: false
+
+      - name: go version
+        run: go version
+
+      - name: make help
+        run: make help
+
+      - name: make doctor
+        run: make doctor
+
+      - name: Negative doctor (missing tool must fail)
+        run: |
+          set -euo pipefail
+          set +e
+          out="$(make doctor REQUIRED_TOOLS='git make definitely-not-a-tool' 2>&1)"
+          code=$?
+          set -e
+          printf '%s\n' "$out"
+          if [[ "$code" -eq 0 ]]; then
+            printf 'FAIL: negative doctor exited 0\n' >&2
+            exit 1
+          fi
+          printf '%s\n' "$out" | grep -Fq 'missing: definitely-not-a-tool' || {
+            printf 'FAIL: negative doctor output missing required string\n' >&2
+            exit 1
+          }
+          printf 'ok negative doctor (exit %s)\n' "$code"
+
+      - name: Prohibited tracked files (default tree + stdin0 suite)
+        run: |
+          set -euo pipefail
+          make check-prohibited
+          make check-prohibited-stdin0
+
+      - name: Targeted Milestone 0 assertions
+        run: make check-m0-assertions
+
+      - name: Executable cloud-mutation check
+        run: make check-no-cloud-mutation
+
+      - name: frictionctl pin verify
+        run: make friction-pin-verify
+
+      - name: Install gitleaks (checksum-pinned)
+        run: |
+          set -euo pipefail
+          version=8.30.1
+          archive="gitleaks_${version}_linux_x64.tar.gz"
+          url="https://github.com/gitleaks/gitleaks/releases/download/v${version}/${archive}"
+          expected='551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb'
+          curl -fsSL -o "${archive}" "${url}"
+          echo "${expected}  ${archive}" | sha256sum -c -
+          tar -xzf "${archive}" gitleaks
+          sudo mv gitleaks /usr/local/bin/gitleaks
+          gitleaks version
+
+      - name: Secret scan
+        run: gitleaks detect --source . --verbose --redact
