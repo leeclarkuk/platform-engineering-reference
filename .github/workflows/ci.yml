@@ -1,5 +1,5 @@
-# Platform gates (M0 and M1, plus Milestone 2 offline Terraform validate).
-# No Terraform apply. No cloud mutation.
+# Platform gates (M0, M1, and Milestone 2 Terraform validate without AWS credentials).
+# No Terraform apply. No cloud mutation. terraform init still downloads providers.
 name: Platform gates
 
 on:
@@ -9,7 +9,6 @@ on:
 
 permissions:
   contents: read
-  actions: write
 
 concurrency:
   group: platform-gates-${{ github.workflow }}-${{ github.ref }}
@@ -26,6 +25,8 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      # Record SHA evidence in the job log and step summary. Artifact upload
+      # is not used: it required actions:write, which this workflow does not grant.
       - name: Record SHA evidence
         id: sha_evidence
         run: |
@@ -63,29 +64,11 @@ jobs:
             echo "RESOLVED_MAIN: ${resolved_main_sha}"
             echo "STARTING_HEAD: ${git_head}"
             echo "WORKTREE_CLEAN: ${worktree_clean}"
+            echo "git_rev_parse_HEAD: ${git_head}"
+            echo "github.sha: ${github_sha}"
+            echo "github.event.pull_request.head.sha: ${reviewed_pr_head_sha:-n/a}"
+            echo "github.event.pull_request.base.sha: ${event_base_sha:-n/a}"
           } >> "$GITHUB_STEP_SUMMARY"
-
-          evidence_dir="${RUNNER_TEMP}/sha-evidence"
-          mkdir -p "${evidence_dir}"
-          {
-            printf 'RESOLVED_MAIN=%s\n' "${resolved_main_sha:-n/a}"
-            printf 'STARTING_HEAD=%s\n' "${git_head}"
-            printf 'WORKTREE_CLEAN=%s\n' "${worktree_clean}"
-            printf 'git_rev_parse_HEAD=%s\n' "${git_head}"
-            printf 'github.sha=%s\n' "${github_sha}"
-            printf 'github.event.pull_request.head.sha=%s\n' "${reviewed_pr_head_sha:-n/a}"
-            printf 'github.event.pull_request.base.sha=%s\n' "${event_base_sha:-n/a}"
-            printf 'github.event_name=%s\n' '${{ github.event_name }}'
-            printf 'github.ref=%s\n' '${{ github.ref }}'
-          } > "${evidence_dir}/sha-evidence.txt"
-          echo "evidence_file=${evidence_dir}/sha-evidence.txt" >> "$GITHUB_OUTPUT"
-
-      - name: Upload SHA evidence artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: sha-evidence
-          path: ${{ steps.sha_evidence.outputs.evidence_file }}
-          if-no-files-found: error
 
       - name: Set up Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0

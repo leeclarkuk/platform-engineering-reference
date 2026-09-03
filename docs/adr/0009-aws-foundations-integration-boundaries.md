@@ -104,14 +104,17 @@ Rejected:
 ## Consequences
 
 * `make terraform-validate` runs `terraform fmt -check -recursive`, the
-  lexical boundary scan, the CI-executed Pod Identity trust JSON check
-  (`scripts/check-pod-identity-trust.sh`), then `terraform init -backend=false`
-  and `terraform validate` for all three roots with AWS credentials unset.
+  lexical boundary scan (exactly three roots, plus negative fixtures), the
+  CI-executed Pod Identity trust JSON check
+  (`scripts/check-pod-identity-trust.sh`), then
+  `terraform init -backend=false -lockfile=readonly` and
+  `terraform validate` for all three roots with AWS credentials unset.
+  Init still downloads the locked AWS provider. This is not air-gapped.
 * `terraform validate` does not evaluate lifecycle preconditions. The trust
   contract is enforced by the static JSON check against independent constants,
   not by a Terraform-time assertion.
 * Pod Identity is intentionally non-operational in this milestone.
-* A dedicated boundary scan rejects Kubernetes/Helm constructs and any
-  terraform apply/destroy or Helm install/upgrade ownership text under
-  `infra/aws/`. That scan is lexical only.
+* A dedicated boundary scan rejects a fourth Terraform root, Kubernetes/Helm
+  constructs, and apply/destroy or Helm install/upgrade ownership text
+  (whitespace-tolerant) under the scanned aws-root. That scan is lexical only.
 

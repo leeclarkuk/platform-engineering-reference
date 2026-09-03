@@ -21,11 +21,13 @@ OUT_DIR ?=
 help: ## Show available targets
 	@awk 'BEGIN {FS = ":.*##"; printf "\nTargets:\n"} \
 		/^[a-zA-Z0-9_.-]+:.*##/ { printf "  %-28s %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
-	@printf "\nMilestone 1 adds a local platform CLI (doctor, validate, create).\n"
-	@printf "Milestone 2 adds offline `make terraform-validate` for infra/aws.\n"
-	@printf "No deploy, apply or destroy target exists.\n"
-	@printf "Doctor does not use cloud credentials and does not call AWS.\n"
-	@printf "friction-pin-verify does not run journeys.\n\n"
+	@printf '%s\n' ''
+	@printf '%s\n' 'Milestone 1 adds a local platform CLI (doctor, validate, create).'
+	@printf '%s\n' 'Milestone 2 adds offline make terraform-validate for infra/aws.'
+	@printf '%s\n' 'No deploy, apply or destroy target exists.'
+	@printf '%s\n' 'Doctor does not use cloud credentials and does not call AWS.'
+	@printf '%s\n' 'friction-pin-verify does not run journeys.'
+	@printf '%s\n' ''
 
 doctor: ## Check required local tools (no cloud credentials, no AWS)
 	@missing=0; \
@@ -187,7 +189,7 @@ terraform-validate: ## Offline fmt/init/validate for infra/aws roots (no AWS cre
 	  lock="$$r/.terraform.lock.hcl"; \
 	  test -f "$$lock" || { printf 'FAIL missing lockfile %s\n' "$$lock" >&2; exit 1; }; \
 	  (cd "$$r" && env -u AWS_ACCESS_KEY_ID -u AWS_SECRET_ACCESS_KEY -u AWS_SESSION_TOKEN -u AWS_PROFILE \
-	    terraform init -backend=false -input=false); \
+	    terraform init -backend=false -input=false -lockfile=readonly); \
 	  (cd "$$r" && env -u AWS_ACCESS_KEY_ID -u AWS_SECRET_ACCESS_KEY -u AWS_SESSION_TOKEN -u AWS_PROFILE \
 	    terraform validate -no-color); \
 	  git diff --exit-code -- "$$lock" >/dev/null || { \
@@ -196,4 +198,4 @@ terraform-validate: ## Offline fmt/init/validate for infra/aws roots (no AWS cre
 	    exit 1; \
 	  }; \
 	done; \
-	printf 'ok terraform-validate (offline, lockfiles preserved)\n'
+	printf 'ok terraform-validate (no AWS credentials; lockfiles readonly; init may download the locked provider)\n'

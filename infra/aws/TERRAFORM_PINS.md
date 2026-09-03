@@ -23,4 +23,6 @@ The Terraform configuration in each root sets:
   CLI binary.
 * Signature or provenance verification (for example, GPG/SLSA attestations)
   is not recorded in this repository, so it is not proved.
+* `terraform init -backend=false` still downloads the locked AWS provider.
+  "No AWS credentials" is not an air-gapped init.
 

@@ -59,6 +59,11 @@ resource "aws_eks_cluster" "this" {
 
   # Milestone 2 is not modelling workloads or node pools.
   enabled_cluster_log_types = []
+
+  depends_on = [
+    aws_iam_role_policy_attachment.eks_cluster_policy,
+    aws_iam_role_policy_attachment.eks_vpc_resource_controller,
+  ]
 }
 
 resource "aws_eks_addon" "pod_identity_agent" {
