@@ -1,0 +1,11 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: bootstrap
+  namespace: argocd
+spec:
+  sourceRepos:
+    - https://github.com/leeclarkuk/platform-engineering-reference
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: apps

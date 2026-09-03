@@ -16,7 +16,7 @@ OUT_DIR ?=
 .PHONY: help doctor check-prohibited check-prohibited-stdin0 \
 	check-m0-assertions check-no-cloud-mutation friction-pin-verify \
 	platform-doctor platform-validate platform-create platform-test test \
-	terraform-validate
+	terraform-validate gitops-validate
 
 help: ## Show available targets
 	@awk 'BEGIN {FS = ":.*##"; printf "\nTargets:\n"} \
@@ -24,6 +24,7 @@ help: ## Show available targets
 	@printf '%s\n' ''
 	@printf '%s\n' 'Milestone 1 adds a local platform CLI (doctor, validate, create).'
 	@printf '%s\n' 'Milestone 2 adds offline make terraform-validate for infra/aws.'
+	@printf '%s\n' 'Milestone 3 adds offline make gitops-validate for gitops/.'
 	@printf '%s\n' 'No deploy, apply or destroy target exists.'
 	@printf '%s\n' 'Doctor does not use cloud credentials and does not call AWS.'
 	@printf '%s\n' 'friction-pin-verify does not run journeys.'
@@ -199,3 +200,6 @@ terraform-validate: ## Offline fmt/init/validate for infra/aws roots (no AWS cre
 	  }; \
 	done; \
 	printf 'ok terraform-validate (no AWS credentials; lockfiles readonly; init may download the locked provider)\n'
+
+gitops-validate: ## Offline kustomize, kubeconform, and GitOps semantic checks (no cluster)
+	@scripts/gitops-validate.sh

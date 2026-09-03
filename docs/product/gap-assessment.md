@@ -4,8 +4,9 @@ This is the intended mission sequence against the **current tree on
 `main`’s descendant branch**, not a plan to copy archive history.
 
 `origin/main` at Milestone 0 start: `1407188077d1ce05eccfc03e9354b8ea951b67fd`
-(`README.md` + `LICENSE` only). Current `main` after Milestone 0 and the
-checkout pin bump: `7636c1ad5c58d8d8ce020201f3dc0dbbc3d2865f`.
+(`README.md` + `LICENSE` only). Closed refs: M0 `5967465` / `c0ffc86`;
+M1 `eabe8872` / `240d6a6`; M2 `21c9edba` / `3743fc27`. This PR is
+Milestone 3.
 
 Archive refs (do **not** copy, merge, or check out as a working base):
 
@@ -18,8 +19,8 @@ Those branches preserve prior work. They are not a backlog.
 | --- | --- | --- | --- |
 | M0 Governance and inventory | Honest claims, ADRs (including agent operating model), `make help`/`doctor`, CI denylist, frictionctl pin+verify, SHA-pinned CI | Merged on `main` (PR #1); checkout pin on `main` (PR #2) | Closed. Do not add AWS code; do not restore archive trees |
 | M1 Platform contract and CLI | Versioned WorkloadContract schema; `platform` CLI `doctor`/`validate`/`create` without cloud credentials | Merged/closed on `main` (`eabe8872` / `240d6a6`; `api/`, `cmd/platform`, `templates/` Helm skeleton, `testdata/`, `go.mod`, ADR-0008) | Closed. Kind remains WorkloadContract; Helm skeleton stays; no AWS, no GitOps apply, no journeys |
-| M2 AWS foundations (local validate) | Terraform for bootstrap/network/workload with **no** Kubernetes objects; `terraform validate` without credentials | This PR (`infra/aws/bootstrap`, `infra/aws/network`, `infra/aws/workload`) is locally validated without AWS credentials (init still downloads the locked provider). It does not prove AWS runtime behaviour | Pod Identity is declared but non-operational in Milestone 2 (no worker nodes and no pods). No live proof is made, and journeys remain unproved until later milestones. |
-| M3 GitOps bootstrap | Argo CD apps for cluster desired state only | Absent (`gitops-golden-path-builder` is dormant) | New `gitops/` later; Terraform must not grow Helm/Kubernetes resources |
+| M2 AWS foundations (local validate) | Terraform for bootstrap/network/workload with **no** Kubernetes objects; `terraform validate` without credentials | Closed on `main` (`21c9edba` / `3743fc27`; `infra/aws/bootstrap`, `infra/aws/network`, `infra/aws/workload`) locally validated without AWS credentials (init still downloads the locked provider). It does not prove AWS runtime behaviour | Pod Identity is declared but non-operational (no worker nodes and no pods). No live proof. Journeys remain unproved |
+| M3 GitOps bootstrap | Argo CD apps for cluster desired state only | This PR (`gitops/` bootstrap namespaces, AppProjects `bootstrap` and `platform`, Application `gitops-root`, committed kubeconform schemas, `make gitops-validate`). Syntactic and offline only | No live cluster, no synced app, no journey, no M4 Application under `gitops/apps/` (`resources: []`). Terraform must not grow Helm/Kubernetes resources |
 | M4 Helm golden path | One Helm chart reconciled by Argo CD; no second Kustomize workload set | Helm skeleton files exist under `templates/`; not reconciled, not a deploy | Argo CD reconcile later; do not copy archive `kubernetes/base` plus Helm |
 | M5 Observability contract | OTel/Prometheus rules as designed, locally lintable | Absent | Not started |
 | M6 Reliability and security proofs | Policy fixtures that fail closed; failure-lab write-ups | Absent (`policies/`, `tests/`, `evidence/` not in M1) | Not started |
