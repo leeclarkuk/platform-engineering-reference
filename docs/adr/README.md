@@ -15,5 +15,6 @@ Status is `proposed`, `accepted`, `superseded` or `rejected`.
 | [0004](0004-helm-only-golden-path.md) | Helm-only golden path; no second workload manifest set | Accepted |
 | [0005](0005-exclusions-backstage-crossplane-mesh-ai.md) | No Backstage, Crossplane, service mesh, or AI control plane | Accepted |
 | [0006](0006-frictionctl-pin-format.md) | frictionctl pin format | Accepted |
+| [0007](0007-agent-operating-model.md) | Agent operating model | Accepted |
 
 New ADRs take the next number. Do not rewrite history. Supersede instead.

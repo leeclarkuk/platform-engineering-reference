@@ -10,61 +10,112 @@ claim production-ready status.
 
 ## Integration owner
 
-The **lead builder** (the main Cursor agent implementing a milestone) is
-the integration owner and the only writer unless a follow-up names a
-delegate. Specialists inspect, propose, or implement within path
-ownership. They do not merge, apply Terraform, or open extra PRs unless
-asked.
+The **Chief of Staff** is the sole coordinator and integration owner.
+There is no second Chief of Staff. Specialists inspect, propose, or
+implement within path ownership. They do not merge, apply Terraform, or
+open extra pull requests.
 
-## Six agents
+The implementation builder writes only after a Lee-approved spec. Milestone
+0 work stays on the existing pull request as the single pstack layer. Do
+not open a second PR.
+
+`platform-product-builder` owns product docs only. It does **not** own
+`AGENTS.md`.
+
+## Model policy
+
+```text
+MODEL_MODE: GROK_ONLY_AUTHORISED_BY_LEE
+REVIEW_INDEPENDENCE: PROCESS_ISOLATED_NOT_MODEL_DIVERSE
+REVIEW_DEBT: RECHECK_WITH_OPUS_WHEN_AVAILABLE
+CONTEXT_MODE: FRESH
+```
+
+Lee authorised Grok as the implementation model for this work. Review
+independence is process isolation (fresh context, named reviewer, hashed
+input bundle), not a second model family. Recheck with Opus when that
+reviewer is available. Public visibility is not a finding. Do not treat a
+fallback as the operating mode.
+
+## Team
 
 | Agent | Role | Write? | Path ownership |
 | --- | --- | --- | --- |
-| `architecture-reasoning` | Architecture gate before boundary or ADR changes | Read-only | none |
-| `platform-product-builder` | Claims, README, gap assessment, product docs | Write | `README.md`, `docs/product/`, `AGENTS.md` (product text only) |
-| `aws-platform-builder` | AWS foundations later | Write when authorised | future `infra/aws/` only; **stop in M0** |
-| `reliability-security-builder` | Ignore rules, secret scan, friction pin, later policy proofs | Write | `.gitignore`, `.github/workflows/`, `.github/dependabot.yml`, `.friction/`, later `policies/` `tests/` `evidence/` |
-| `multicloud-parity-builder` | Azure/GCP native parity later | Write when authorised | future `infra/azure/`, `infra/gcp/`; **stop until M8** |
-| `independent-reviewer` | Falsify claims after implementation | Read-only | none |
+| `specification-architect` | Spec-first architecture gate before implementation | Read-only | none |
+| `platform-product-builder` | Claims, README, gap assessment | Write | `README.md`, `docs/product/` only (not `AGENTS.md`) |
+| `aws-foundations-builder` | AWS foundations later | Dormant in M0; refuse M0 writes | future `infra/aws/` only |
+| `gitops-golden-path-builder` | GitOps and Helm golden path later | Dormant in M0; refuse M0 writes | future `gitops/`, Helm charts |
+| `reliability-security-reviewer` | Process-isolated review of ignore rules, pin, CI, secrets | Read-only | none |
+| `evidence-adversarial-reviewer` | Falsify claims without the other reviewer's verdict | Read-only | none |
 
-Definitions live in `.cursor/agents/`.
+Definitions live in `.cursor/agents/`. Azure/GCP specialist work and
+Graphite are out of scope.
 
-## Routing
+## Workflow
 
-1. Inspect `HEAD`, allowed paths, and ADRs.
-2. Invoke `architecture-reasoning` before adding or changing ADRs,
-   ownership, or milestone scope.
-3. Lead builder writes the milestone (this M0 set).
-4. Route path-shaped follow-ups to the matching builder; they must refuse
-   forbidden paths.
-5. Invoke `independent-reviewer` before claiming completion.
-6. Hand off with the format below. Do not merge unless the user says so.
+1. `/goal` is spec-first. Invoke `specification-architect` before adding
+   or changing ADRs, ownership, or milestone scope. Do not implement first.
+2. Lee approval is required before implementation.
+3. After approval, use pstack on the **existing** pull request as the
+   single layer. Do not open a second PR. Do not retarget, rebase onto a
+   new branch, or merge unless the user says so.
+4. Bounded `/swarm` may fan out specialists inside path ownership. Swarm
+   members must refuse forbidden paths. Dormant AWS and GitOps builders
+   refuse Milestone 0 writes.
+5. `/loop` is verification-only. If a check fails, make the smallest
+   correction and rerun. Stop after three unsuccessful attempts.
 
 ## Write boundaries (Milestone 0)
 
 Allowed: `README.md`, `AGENTS.md`, `Makefile`, `.gitignore`,
 `.github/workflows/`, `.github/dependabot.yml`, `.cursor/agents/`,
-`docs/adr/`, `docs/product/`, `.friction/`. Do not change `LICENSE`.
+`docs/adr/`, `docs/product/`, `.friction/`, `scripts/`. Do not change
+`LICENSE`. Do not stage secret files in the repository.
 
 Forbidden: `infra/`, `terraform/`, `landing-zones/`, `gitops/`,
 `kubernetes/`, `examples/`, `developer-platform/` copied from archive;
 checkout/cherry-pick/copy of `81cac81` or `23c7744`; recreating `3522e48`;
-Azure/GCP modules; Backstage; Crossplane; mesh; AI; `terraform apply`;
-empty directories with no file; overlapping Terraform and GitOps objects.
+Azure/GCP modules; Backstage; Crossplane; mesh; AI; runnable
+Terraform/OpenTofu apply or destroy; empty directories with no file;
+overlapping Terraform and GitOps objects; Graphite; `frictionctl run` /
+journey proof.
 
 `recover/*` is archive only.
 
 ## Review gates
 
-* `architecture-reasoning` before ADR or control-plane changes.
-* `make help` and `make doctor` (no cloud credentials).
-* Secret scan in CI; no Terraform apply in CI.
-* `independent-reviewer` before done.
-* Claims in `docs/product/claims-matrix.md` must match commands actually run.
+* Spec and Lee approval before implementation.
+* `make help`, `make doctor`, `make check-prohibited`,
+  `make friction-pin-verify` (no cloud credentials).
+* Secret scan in CI. Executable files under `.github/workflows/`,
+  `Makefile`, and `scripts/` must not contain runnable Terraform/OpenTofu
+  apply or destroy, `kubectl apply`, or Helm install/upgrade.
+* Process-isolated reviews: `reliability-security-reviewer` and
+  `evidence-adversarial-reviewer` in fresh context. The evidence reviewer
+  must not receive the reliability-security verdict.
+* Claims in `docs/product/claims-matrix.md` must match commands actually
+  run.
 
-## Hand-off format
+## Process-isolated review hand-off
 
-Return exactly these headings to the **lead builder**:
+Reviewers return exactly these fields, plus evidence. Do not reuse a
+builder transcript as the review context.
+
+```text
+REVIEWER
+MODEL
+AGENT_RUN_ID
+CONTEXT_MODE: FRESH
+INPUT_BUNDLE_SHA256
+REPOSITORY_HEAD
+VERDICT
+```
+
+`VERDICT` is `PASS` or `BLOCKED`. `INPUT_BUNDLE_SHA256` hashes the files
+and command outputs given to that reviewer. `REPOSITORY_HEAD` is the
+commit actually reviewed.
+
+Builders may also return:
 
 ```text
 SUMMARY
@@ -85,4 +136,6 @@ INTEGRATION NOTES
 ## Stop conditions
 
 Dirty unrelated files; urge to copy archive trees; recreating `3522e48`;
-cloud credentials required; overlapping Terraform/GitOps in the PR.
+cloud credentials required; overlapping Terraform/GitOps in the PR;
+opening a second pull request; dormant builders writing in Milestone 0;
+three consecutive failed verification loops.
