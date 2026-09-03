@@ -15,12 +15,14 @@ OUT_DIR ?=
 
 .PHONY: help doctor check-prohibited check-prohibited-stdin0 \
 	check-m0-assertions check-no-cloud-mutation friction-pin-verify \
-	platform-doctor platform-validate platform-create platform-test test
+	platform-doctor platform-validate platform-create platform-test test \
+	terraform-validate
 
 help: ## Show available targets
 	@awk 'BEGIN {FS = ":.*##"; printf "\nTargets:\n"} \
 		/^[a-zA-Z0-9_.-]+:.*##/ { printf "  %-28s %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
 	@printf "\nMilestone 1 adds a local platform CLI (doctor, validate, create).\n"
+	@printf "Milestone 2 adds offline `make terraform-validate` for infra/aws.\n"
 	@printf "No deploy, apply or destroy target exists.\n"
 	@printf "Doctor does not use cloud credentials and does not call AWS.\n"
 	@printf "friction-pin-verify does not run journeys.\n\n"
@@ -174,3 +176,23 @@ test: ## Run Go unit tests
 
 platform-test: ## Run Go tests and CLI positive/negative checks
 	@scripts/platform-test.sh
+
+terraform-validate: ## Offline fmt/init/validate for infra/aws roots (no AWS credentials)
+	@set -euo pipefail; \
+	roots='infra/aws/bootstrap infra/aws/network infra/aws/workload'; \
+	terraform fmt -check -recursive infra/aws; \
+	scripts/check-aws-foundations-boundaries.sh; \
+	for r in $$roots; do \
+	  lock="$$r/.terraform.lock.hcl"; \
+	  test -f "$$lock" || { printf 'FAIL missing lockfile %s\n' "$$lock" >&2; exit 1; }; \
+	  (cd "$$r" && env -u AWS_ACCESS_KEY_ID -u AWS_SECRET_ACCESS_KEY -u AWS_SESSION_TOKEN -u AWS_PROFILE \
+	    terraform init -backend=false -input=false); \
+	  (cd "$$r" && env -u AWS_ACCESS_KEY_ID -u AWS_SECRET_ACCESS_KEY -u AWS_SESSION_TOKEN -u AWS_PROFILE \
+	    terraform validate -no-color); \
+	  git diff --exit-code -- "$$lock" >/dev/null || { \
+	    printf 'FAIL lockfile changed during terraform init: %s\n' "$$lock" >&2; \
+	    git diff -- "$$lock" >&2; \
+	    exit 1; \
+	  }; \
+	done; \
+	printf 'ok terraform-validate (offline, lockfiles preserved)\n'

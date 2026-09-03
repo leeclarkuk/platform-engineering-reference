@@ -17,5 +17,6 @@ Status is `proposed`, `accepted`, `superseded` or `rejected`.
 | [0006](0006-frictionctl-pin-format.md) | frictionctl pin format | Accepted |
 | [0007](0007-agent-operating-model.md) | Agent operating model | Accepted |
 | [0008](0008-platform-contract-and-cli.md) | Platform contract and CLI | Accepted |
+| [0009](0009-aws-foundations-integration-boundaries.md) | AWS foundations roots and Pod Identity status | Accepted |
 
 New ADRs take the next number. Do not rewrite history. Supersede instead.
