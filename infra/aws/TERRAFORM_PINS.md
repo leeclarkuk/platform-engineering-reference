@@ -17,3 +17,10 @@ The Terraform configuration in each root sets:
 * Tag: `v4.0.1`
 * Pinned commit SHA: `dfe3c3f87815947d99a8997f908cb6525fc44e9e`
 
+## Limitations (evidence)
+
+* Evidence recorded here includes SHA-256 checksum matching for the Terraform
+  CLI binary.
+* Signature or provenance verification (for example, GPG/SLSA attestations)
+  is not recorded in this repository, so it is not proved.
+

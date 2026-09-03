@@ -3,6 +3,47 @@ locals {
   # worker nodes and no pods. The association is therefore non-operational
   # until compatible compute exists.
   pod_identity_non_operational_until_compute = true
+
+  # Pod Identity role trust contract (Milestone 2):
+  # * Principal.Service = pods.eks.amazonaws.com
+  # * Actions = sts:AssumeRole and sts:TagSession
+  pod_identity_trust_principal_service = "pods.eks.amazonaws.com"
+  pod_identity_trust_actions           = ["sts:AssumeRole", "sts:TagSession"]
+
+  pod_identity_trust_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = local.pod_identity_trust_principal_service
+        }
+        Action = local.pod_identity_trust_actions
+      }
+    ]
+  })
+
+  pod_identity_trust_policy_decoded = jsondecode(local.pod_identity_trust_policy)
+
+  pod_identity_trust_principal_service_rendered = try(
+    local.pod_identity_trust_policy_decoded.Statement[0].Principal.Service,
+    ""
+  )
+
+  pod_identity_trust_actions_rendered = try(
+    local.pod_identity_trust_policy_decoded.Statement[0].Action,
+    []
+  )
+
+  pod_identity_trust_actions_rendered_list = try(
+    tolist(local.pod_identity_trust_actions_rendered),
+    [local.pod_identity_trust_actions_rendered]
+  )
+
+  pod_identity_trust_semantic_ok = (
+    local.pod_identity_trust_principal_service_rendered == local.pod_identity_trust_principal_service &&
+    sort(local.pod_identity_trust_actions_rendered_list) == sort(local.pod_identity_trust_actions)
+  )
 }
 
 resource "aws_iam_role" "eks_cluster_role" {
@@ -71,19 +112,15 @@ resource "aws_eks_addon" "pod_identity_agent" {
 resource "aws_iam_role" "pod_identity_role" {
   name = var.pod_identity_role_name
 
-  # Pod Identity role trust principal: pods.eks.amazonaws.com.
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Principal = {
-          Service = "pods.eks.amazonaws.com"
-        }
-        Action = "sts:AssumeRoleWithWebIdentity"
-      }
-    ]
-  })
+  # Pod Identity role trust contract (see locals above).
+  assume_role_policy = local.pod_identity_trust_policy
+
+  lifecycle {
+    precondition {
+      condition     = local.pod_identity_trust_semantic_ok
+      error_message = "Pod Identity trust policy must trust pods.eks.amazonaws.com and allow sts:AssumeRole and sts:TagSession."
+    }
+  }
 }
 
 resource "aws_eks_pod_identity_association" "this" {

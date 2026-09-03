@@ -5,8 +5,10 @@
 # * Reject Kubernetes/Helm ownership constructs inside infra/aws/.
 # * Reject terraform apply/destroy and Helm install/upgrade ownership text.
 #
-# This is a text scan. Terraform offline validation proves syntax only, not
-# AWS or Kubernetes runtime behaviour.
+# This is a lexical (text) scan, it rejects obvious Kubernetes/Helm ownership
+# constructs and apply/destroy text. It does not prove semantic absence.
+# Terraform offline validation proves Terraform syntax only, not AWS or
+# Kubernetes runtime behaviour.
 
 set -euo pipefail
 
