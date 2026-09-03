@@ -47,5 +47,7 @@ Then:
 4. Each Milestone claim mapped to Verified, Failed, or Not evidenced.
 5. Residual risk.
 
-PASS only with no Critical or High findings and every authorised
-acceptance criterion verified.
+`VERDICT` is `PASS`, `PASS_WITH_CONDITIONS`, or `DENY`. Any Blocker or High finding must produce `DENY`. PASS only with no Critical, Blocker, or High
+findings and every authorised acceptance criterion verified.
+PASS_WITH_CONDITIONS is for residual Medium/Low conditions only, never
+for Blocker/High.

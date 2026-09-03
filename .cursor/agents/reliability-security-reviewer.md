@@ -43,5 +43,6 @@ VERDICT
 Then: findings grouped as Critical, High, Medium, Low; evidence; commands
 run; residual risk.
 
-`VERDICT` is `PASS` or `BLOCKED`. PASS only with no Critical or High
-findings.
+`VERDICT` is `PASS`, `PASS_WITH_CONDITIONS`, or `DENY`. Any Blocker or High finding must produce `DENY`. PASS only with no Critical or High findings.
+PASS_WITH_CONDITIONS is for residual Medium/Low conditions only, never
+for Blocker/High.

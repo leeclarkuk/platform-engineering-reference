@@ -127,6 +127,19 @@ check-m0-assertions: ## Targeted Milestone 0 governance assertions
 	! grep -RFn 'go-version: stable' .github/workflows; \
 	! grep -RFn 'go-version: oldstable' .github/workflows; \
 	! grep -REn "go-version:[[:space:]]*['\"]?[0-9]+\.[0-9]+\.x" .github/workflows; \
+	grep -Fq 'PASS_WITH_CONDITIONS' AGENTS.md; \
+	grep -Fq 'PASS_WITH_CONDITIONS' .cursor/agents/reliability-security-reviewer.md; \
+	grep -Fq 'PASS_WITH_CONDITIONS' .cursor/agents/evidence-adversarial-reviewer.md; \
+	grep -Fq 'Any Blocker or High finding must produce `DENY`' AGENTS.md; \
+	grep -Fq 'Any Blocker or High finding must produce `DENY`' .cursor/agents/reliability-security-reviewer.md; \
+	grep -Fq 'Any Blocker or High finding must produce `DENY`' .cursor/agents/evidence-adversarial-reviewer.md; \
+	! grep -Fn '`VERDICT` is `PASS` or `BLOCKED`' AGENTS.md; \
+	! grep -Fn '`VERDICT` is `PASS` or `BLOCKED`' .cursor/agents/reliability-security-reviewer.md; \
+	! grep -Fn '`VERDICT` is `PASS` or `BLOCKED`' .cursor/agents/evidence-adversarial-reviewer.md; \
+	grep -Fq '`VERDICT` is `PASS`, `PASS_WITH_CONDITIONS`, or `DENY`' AGENTS.md; \
+	! grep -RFn 'github.event.workflow_run.head_sha' .github/workflows; \
+	grep -Fn 'github.event.pull_request.head.sha' .github/workflows/ci.yml; \
+	grep -Fn 'github.event.pull_request.base.sha' .github/workflows/ci.yml; \
 	printf 'ok m0 assertions\n'
 
 check-no-cloud-mutation: ## Reject runnable cloud-mutation commands in workflows/Make/scripts

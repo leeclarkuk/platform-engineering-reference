@@ -26,15 +26,16 @@ jobs:
       - name: Record SHA evidence
         run: |
           set -euo pipefail
+          # Do not read workflow_run head_sha here. That field is not populated on pull_request. Collect workflow-run API head_sha externally for the review hand-off and compare it with the reviewed PR head.
           reviewed_pr_head_sha='${{ github.event.pull_request.head.sha }}'
-          workflow_run_head_sha='${{ github.event.workflow_run.head_sha }}'
           github_sha='${{ github.sha }}'
+          event_base_sha='${{ github.event.pull_request.base.sha }}'
           git_head="$(git rev-parse HEAD)"
           printf 'event_name=%s\n' '${{ github.event_name }}'
           printf 'github.ref=%s\n' '${{ github.ref }}'
           printf 'reviewed PR head SHA=%s\n' "${reviewed_pr_head_sha:-n/a}"
-          printf 'workflow-run head_sha=%s\n' "${workflow_run_head_sha:-n/a}"
-          printf 'github.sha (do not treat as branch head)=%s\n' "${github_sha}"
+          printf 'event checkout SHA (github.sha)=%s\n' "${github_sha}"
+          printf 'event base SHA=%s\n' "${event_base_sha:-n/a}"
           printf 'git rev-parse HEAD actually tested=%s\n' "${git_head}"
           if [[ -n "${reviewed_pr_head_sha}" && "${git_head}" != "${reviewed_pr_head_sha}" ]]; then
             printf 'synthetic merge SHA=%s (HEAD is the merge commit, not the PR branch head)\n' "${git_head}"

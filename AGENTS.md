@@ -111,7 +111,7 @@ REPOSITORY_HEAD
 VERDICT
 ```
 
-`VERDICT` is `PASS` or `BLOCKED`. `INPUT_BUNDLE_SHA256` hashes the files
+`VERDICT` is `PASS`, `PASS_WITH_CONDITIONS`, or `DENY`. Any Blocker or High finding must produce `DENY`. `INPUT_BUNDLE_SHA256` hashes the files
 and command outputs given to that reviewer. `REPOSITORY_HEAD` is the
 commit actually reviewed.
 

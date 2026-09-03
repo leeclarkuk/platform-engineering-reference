@@ -25,7 +25,8 @@ Protect:
 
 Return exactly:
 
-1. `VERDICT: PASS` or `VERDICT: BLOCKED`.
+1. `VERDICT: PASS`, `VERDICT: PASS_WITH_CONDITIONS`, or `VERDICT: DENY`.
+   Any Blocker or High finding must produce `DENY`.
 2. Blocking findings with evidence and the invariant violated.
 3. Non-blocking risks.
 4. Exact amendments or tests required.
