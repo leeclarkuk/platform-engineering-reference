@@ -13,8 +13,11 @@ Hard constraints in Milestone 2:
   exists and schedules pods that match the declared service account
   strings.
 
-Pod Identity role trust principal:
-* `pods.eks.amazonaws.com`
+Pod Identity role trust (declared, not operational):
+* Principal.Service: `pods.eks.amazonaws.com`
+* Action: `sts:AssumeRole` and `sts:TagSession`
+* Enforced by `scripts/check-pod-identity-trust.sh` in `make terraform-validate`
+  (static JSON, independent constants). Not a Terraform-time assertion.
 
 ServiceAccount namespace/name input strings:
 * `apps/sample`

@@ -182,6 +182,7 @@ terraform-validate: ## Offline fmt/init/validate for infra/aws roots (no AWS cre
 	roots='infra/aws/bootstrap infra/aws/network infra/aws/workload'; \
 	terraform fmt -check -recursive infra/aws; \
 	scripts/check-aws-foundations-boundaries.sh; \
+	scripts/check-pod-identity-trust.sh; \
 	for r in $$roots; do \
 	  lock="$$r/.terraform.lock.hcl"; \
 	  test -f "$$lock" || { printf 'FAIL missing lockfile %s\n' "$$lock" >&2; exit 1; }; \
