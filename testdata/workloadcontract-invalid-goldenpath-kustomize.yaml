@@ -1,0 +1,10 @@
+apiVersion: platform.engineering.reference/v1alpha1
+kind: WorkloadContract
+metadata:
+  name: kustomize-not-allowed
+spec:
+  owner: platform
+  goldenPath: kustomize
+  serviceAccount:
+    namespace: apps
+    name: kustomize-not-allowed

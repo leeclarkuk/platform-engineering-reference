@@ -1,0 +1,9 @@
+apiVersion: platform.engineering.reference/v1alpha1
+kind: WorkloadContract
+metadata:
+  name: missing-owner
+spec:
+  goldenPath: helm
+  serviceAccount:
+    namespace: apps
+    name: missing-owner

@@ -7,13 +7,21 @@ SHELL := /bin/bash
 # make doctor REQUIRED_TOOLS="git make definitely-not-a-tool"
 REQUIRED_TOOLS ?= git make
 
+FILE ?= testdata/workloadcontract-valid.yaml
+NAME ?= sample
+OWNER ?= platform
+NAMESPACE ?= apps
+OUT_DIR ?=
+
 .PHONY: help doctor check-prohibited check-prohibited-stdin0 \
-	check-m0-assertions check-no-cloud-mutation friction-pin-verify
+	check-m0-assertions check-no-cloud-mutation friction-pin-verify \
+	platform-doctor platform-validate platform-create test
 
 help: ## Show available targets
 	@awk 'BEGIN {FS = ":.*##"; printf "\nTargets:\n"} \
 		/^[a-zA-Z0-9_.-]+:.*##/ { printf "  %-28s %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
-	@printf "\nNo deploy, apply or destroy target exists in Milestone 0.\n"
+	@printf "\nMilestone 1 adds a local platform CLI (doctor, validate, create).\n"
+	@printf "No deploy, apply or destroy target exists.\n"
 	@printf "Doctor does not use cloud credentials and does not call AWS.\n"
 	@printf "friction-pin-verify does not run journeys.\n\n"
 
@@ -147,3 +155,19 @@ check-no-cloud-mutation: ## Reject runnable cloud-mutation commands in workflows
 
 friction-pin-verify: ## Verify frictionctl module sums then install the pinned CLI
 	@scripts/friction-pin-verify.sh
+
+platform-doctor: ## Run platform doctor (git, make, go; no AWS)
+	go run ./cmd/platform doctor
+
+platform-validate: ## Validate a WorkloadContract YAML (FILE=path)
+	go run ./cmd/platform validate "$(FILE)"
+
+platform-create: ## Write a WorkloadContract and Helm skeleton (NAME OWNER NAMESPACE [OUT_DIR])
+	@if [ -n "$(OUT_DIR)" ]; then \
+	  go run ./cmd/platform create --name "$(NAME)" --owner "$(OWNER)" --namespace "$(NAMESPACE)" --out-dir "$(OUT_DIR)"; \
+	else \
+	  go run ./cmd/platform create --name "$(NAME)" --owner "$(OWNER)" --namespace "$(NAMESPACE)"; \
+	fi
+
+test: ## Run Go unit tests
+	go test ./...

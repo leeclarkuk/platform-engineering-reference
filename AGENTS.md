@@ -5,8 +5,9 @@ Instructions for humans and coding agents working on this repository.
 ## Product
 
 This is a platform engineering **reference**, not a live estate. Milestone 0
-is governance on empty `main` (`1407188`). Nothing is live-proved. Do not
-claim production-ready status.
+is governance on empty `main` (`1407188`). Milestone 1 adds a WorkloadContract
+schema and a local `platform` CLI. Nothing is live-proved. Do not claim
+production-ready status.
 
 ## Integration owner
 
@@ -15,9 +16,10 @@ There is no second Chief of Staff. Specialists inspect, propose, or
 implement within path ownership. They do not merge, apply Terraform, or
 open extra pull requests.
 
-The implementation builder writes only after a Lee-approved spec. Milestone
-0 work stays on the existing pull request as the single pstack layer. Do
-not open a second PR.
+The implementation builder writes only after a Lee-approved spec. The
+Milestone 0 single-PR rule is closed (PR #1 merged). Milestone 1 is this one
+new pull request. Do not open a second PR for this layer. Do not merge
+without Lee.
 
 `platform-product-builder` owns product docs only. It does **not** own
 `AGENTS.md`.
@@ -43,50 +45,57 @@ fallback as the operating mode.
 | --- | --- | --- | --- |
 | `specification-architect` | Spec-first architecture gate before implementation | Read-only | none |
 | `platform-product-builder` | Claims, README, gap assessment | Write | `README.md`, `docs/product/` only (not `AGENTS.md`) |
-| `aws-foundations-builder` | AWS foundations later | Dormant in M0; refuse M0 writes | future `infra/aws/` only |
-| `gitops-golden-path-builder` | GitOps and Helm golden path later | Dormant in M0; refuse M0 writes | future `gitops/`, Helm charts |
+| `aws-foundations-builder` | AWS foundations later | Dormant; refuse writes outside later `infra/aws/` | future `infra/aws/` only |
+| `gitops-golden-path-builder` | GitOps later | Dormant; refuse writes outside later `gitops/` | future `gitops/` |
 | `reliability-security-reviewer` | Process-isolated review of ignore rules, pin, CI, secrets | Read-only | none |
 | `evidence-adversarial-reviewer` | Falsify claims without the other reviewer's verdict | Read-only | none |
 
 Definitions live in `.cursor/agents/`. Azure/GCP specialist work and
-Graphite are out of scope.
+Graphite are out of scope. Helm files under `templates/` in Milestone 1 are
+a chart skeleton on disk, not a GitOps apply.
 
 ## Workflow
 
 1. `/goal` is spec-first. Invoke `specification-architect` before adding
    or changing ADRs, ownership, or milestone scope. Do not implement first.
 2. Lee approval is required before implementation.
-3. After approval, use pstack on the **existing** pull request as the
-   single layer. Do not open a second PR. Do not retarget, rebase onto a
-   new branch, or merge unless the user says so.
+3. After approval, Milestone 1 is this one new pull request. Do not open
+   a second PR. Do not retarget, rebase onto a new branch, or merge unless
+   the user says so.
 4. Bounded `/swarm` may fan out specialists inside path ownership. Swarm
    members must refuse forbidden paths. Dormant AWS and GitOps builders
-   refuse Milestone 0 writes.
+   refuse writes outside later `infra/aws/` and `gitops/`.
 5. `/loop` is verification-only. If a check fails, make the smallest
    correction and rerun. Stop after three unsuccessful attempts.
 
-## Write boundaries (Milestone 0)
+## Write boundaries (Milestone 1)
 
 Allowed: `README.md`, `AGENTS.md`, `Makefile`, `.gitignore`,
 `.github/workflows/`, `.github/dependabot.yml`, `.cursor/agents/`,
-`docs/adr/`, `docs/product/`, `.friction/`, `scripts/`. Do not change
-`LICENSE`. Do not stage secret files in the repository.
+`docs/adr/`, `docs/product/`, `.friction/`, `scripts/`, `api/`, `cmd/`,
+`templates/`, `testdata/`, `go.mod`, `go.sum`. Do not change `LICENSE`.
+Do not stage secret files in the repository.
 
 Forbidden: `infra/`, `terraform/`, `landing-zones/`, `gitops/`,
-`kubernetes/`, `examples/`, `developer-platform/` copied from archive;
-checkout/cherry-pick/copy of `81cac81` or `23c7744`; recreating `3522e48`;
-Azure/GCP modules; Backstage; Crossplane; mesh; AI; runnable
-Terraform/OpenTofu apply or destroy; empty directories with no file;
-overlapping Terraform and GitOps objects; Graphite; `frictionctl run` /
-journey proof.
+`kubernetes/` (except Helm files under `templates/`), `examples/`,
+`developer-platform/` copied from archive; checkout/cherry-pick/copy of
+`81cac81` or `23c7744`; recreating `3522e48`; Azure/GCP modules;
+Backstage; Crossplane; mesh; AI; runnable Terraform/OpenTofu apply or
+destroy; empty directories with no file; overlapping Terraform and GitOps
+objects; Graphite; `frictionctl run` / journey proof.
 
 `recover/*` is archive only.
+
+AWS and GitOps builders remain dormant. They must refuse writes outside
+later `infra/aws/` and `gitops/`.
 
 ## Review gates
 
 * Spec and Lee approval before implementation.
 * `make help`, `make doctor`, `make check-prohibited`,
   `make friction-pin-verify` (no cloud credentials).
+* `go test ./...`, `platform doctor`, `platform validate`,
+  `platform create` (local; no AWS).
 * Secret scan in CI. Executable files under `.github/workflows/`,
   `Makefile`, and `scripts/` must not contain runnable Terraform/OpenTofu
   apply or destroy, `kubectl apply`, or Helm install/upgrade.
@@ -137,5 +146,5 @@ INTEGRATION NOTES
 
 Dirty unrelated files; urge to copy archive trees; recreating `3522e48`;
 cloud credentials required; overlapping Terraform/GitOps in the PR;
-opening a second pull request; dormant builders writing in Milestone 0;
-three consecutive failed verification loops.
+opening a second pull request; dormant builders writing outside later
+`infra/aws/` and `gitops/`; three consecutive failed verification loops.
