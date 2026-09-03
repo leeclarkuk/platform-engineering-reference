@@ -1,10 +1,11 @@
-# Gap assessment (M0–M8)
+# Gap assessment (M0-M8)
 
 This is the intended mission sequence against the **current tree on
 `main`’s descendant branch**, not a plan to copy archive history.
 
 `origin/main` at Milestone 0 start: `1407188077d1ce05eccfc03e9354b8ea951b67fd`
-(`README.md` + `LICENSE` only).
+(`README.md` + `LICENSE` only). Current `main` after Milestone 0 and the
+checkout pin bump: `7636c1ad5c58d8d8ce020201f3dc0dbbc3d2865f`.
 
 Archive refs (do **not** copy, merge, or check out as a working base):
 
@@ -15,15 +16,15 @@ Those branches preserve prior work. They are not a backlog.
 
 | Milestone | Intent | Current tree | Gap |
 | --- | --- | --- | --- |
-| M0 Governance and inventory | Honest claims, ADRs (including agent operating model), `make help`/`doctor`, CI denylist, frictionctl pin+verify, SHA-pinned CI | This PR (corrective spec on the existing branch) | Close this row in the PR; do not add AWS code; do not open a second PR |
-| M1 Platform contract and CLI | Versioned contract schema; `platform` CLI `doctor`/`validate`/`create` without cloud credentials | Absent (`api/`, `cmd/`, `platform/`, `templates/` not in M0) | New work on empty-main lineage; do not copy `developer-platform/` from archive |
-| M2 AWS foundations (local validate) | Terraform for bootstrap/network/workload with **no** Kubernetes objects; `terraform validate` without credentials | Absent (`infra/` forbidden in M0; `aws-foundations-builder` is dormant) | New AWS modules on this lineage; do not restore archive `terraform/` or `landing-zones/` |
+| M0 Governance and inventory | Honest claims, ADRs (including agent operating model), `make help`/`doctor`, CI denylist, frictionctl pin+verify, SHA-pinned CI | Merged on `main` (PR #1); checkout pin on `main` (PR #2) | Closed. Do not add AWS code; do not restore archive trees |
+| M1 Platform contract and CLI | Versioned WorkloadContract schema; `platform` CLI `doctor`/`validate`/`create` without cloud credentials | This PR (`api/`, `cmd/platform`, `templates/` Helm skeleton, `testdata/`, `go.mod`, ADR-0008) | Close this row in the PR; kind remains WorkloadContract; Helm skeleton stays; no AWS, no GitOps apply, no journeys |
+| M2 AWS foundations (local validate) | Terraform for bootstrap/network/workload with **no** Kubernetes objects; `terraform validate` without credentials | Absent (`infra/` forbidden; `aws-foundations-builder` is dormant) | New AWS modules on this lineage; do not restore archive `terraform/` or `landing-zones/` |
 | M3 GitOps bootstrap | Argo CD apps for cluster desired state only | Absent (`gitops-golden-path-builder` is dormant) | New `gitops/` later; Terraform must not grow Helm/Kubernetes resources |
-| M4 Helm golden path | One Helm chart reconciled by Argo CD; no second Kustomize workload set | Absent | New `workloads/` or templates later; do not copy archive `kubernetes/base` plus Helm |
+| M4 Helm golden path | One Helm chart reconciled by Argo CD; no second Kustomize workload set | Helm skeleton files exist under `templates/`; not reconciled, not a deploy | Argo CD reconcile later; do not copy archive `kubernetes/base` plus Helm |
 | M5 Observability contract | OTel/Prometheus rules as designed, locally lintable | Absent | Not started |
-| M6 Reliability and security proofs | Policy fixtures that fail closed; failure-lab write-ups | Absent (`policies/`, `tests/`, `evidence/` not in M0) | Not started |
-| M7 Friction journeys proved | `frictionctl run` / `compare` against the real golden path | Pin + module-sum verify only; `journeys_proved: false` | Journeys cannot be honest until M1–M4 exist |
-| M8 Azure/GCP native parity | Provider-native depth after AWS local-validate exists | Absent by design (no Azure/GCP specialist in M0) | Not LCM modules; not M0 |
+| M6 Reliability and security proofs | Policy fixtures that fail closed; failure-lab write-ups | Absent (`policies/`, `tests/`, `evidence/` not in M1) | Not started |
+| M7 Friction journeys proved | `frictionctl run` / `compare` against the real golden path | Pin + module-sum verify only; `journeys_proved: false` | Journeys cannot be honest until M2-M4 exist |
+| M8 Azure/GCP native parity | Provider-native depth after AWS local-validate exists | Absent by design (no Azure/GCP specialist) | Not LCM modules; not M1 |
 
 ## Explicit non-goals until a later authorised milestone
 

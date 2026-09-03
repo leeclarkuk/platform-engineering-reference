@@ -21,31 +21,40 @@ gates that need no cloud credentials:
 
 * what is designed versus what has been run locally
 * ownership law for Terraform versus Argo CD (no overlapping objects)
-* agent operating model (Grok-only, process-isolated review, single PR)
+* agent operating model (Grok-only, process-isolated review; M0 single-PR
+  closed; M1 is one new PR)
 * `make help` and `make doctor`
+* `make platform-test` (Go tests plus CLI positive/negative checks)
+* `platform doctor`, `platform validate`, and `platform create` (local CLI)
+* a WorkloadContract JSON Schema with valid and invalid fixtures
+* one Helm chart skeleton under `templates/` (files on disk, not a deploy)
 * CI denylist so Terraform state and keys cannot be tracked unnoticed by CI
 * a recorded pin for `frictionctl` module tag `v0.1.0` with Go module sums
   verified (`frictionctl version` is exactly `0.1.0`; journeys are **not**
   proved)
 
-That is all. No cluster, no account, no workload path, no live traffic.
+That is all. No cluster, no account, no live workload path, no live traffic.
 
 ## What runs locally
 
 ```bash
 make help && make doctor
 make check-prohibited
+make platform-test
 make friction-pin-verify
 ```
 
 `make help` lists the real targets. `make doctor` checks required local
 tools (`git`, `make`). It does not call AWS. It does not need credentials.
+`platform doctor` additionally requires `go`. It succeeds with AWS
+credential environment variables unset. It does not call AWS.
+`make platform-test` runs `go test ./...` and CLI positive/negative checks.
 `make friction-pin-verify` uses `go mod download -json` (not a sumdb curl)
 and does not run journeys.
 
-CI on pull requests runs those gates, a negative doctor case, the
-prohibited-path stdin0 suite, targeted operating-model assertions, and a
-Gitleaks scan. CI does not run Terraform.
+CI on pull requests runs those gates, `make platform-test`, a negative
+doctor case, the prohibited-path stdin0 suite, targeted operating-model
+assertions, and a Gitleaks scan. CI does not run Terraform.
 
 ## What costs money
 
@@ -58,12 +67,15 @@ slice and someone applies it on purpose.
 | Item | Status |
 | --- | --- |
 | Product claims and gap assessment | Written; locally readable |
-| ADRs for source of truth, ownership, AWS-first, Helm-only golden path, exclusions, frictionctl pin, agent operating model | Written (0001–0005 remain Accepted) |
-| `make help` / `make doctor` | Locally runnable |
+| ADRs for source of truth, ownership, AWS-first, Helm-only golden path, exclusions, frictionctl pin, agent operating model, platform contract and CLI | Written (0001-0005 remain Accepted; 0008 is this milestone) |
+| `make help` / `make doctor` | Locally proved |
+| `platform doctor` / `platform validate` / `platform create` | Locally proved when those commands are run |
+| WorkloadContract schema and fixtures | Locally proved by `go test` and `platform validate` |
+| Helm chart skeleton under `templates/` | Files on disk; not a deploy; not live proved |
 | Tracked-file denylist in CI | Locally runnable; CI-asserted |
 | Secret scan in CI | Designed to run on GitHub; not a live-cloud proof |
 | frictionctl v0.1.0 pin + module-sum verify | Recorded and verifiable; journeys not proved |
-| AWS landing zone, EKS, GitOps, sample workload | Designed only (later milestones; builders dormant in M0) |
+| AWS landing zone, EKS, GitOps apply, sample workload traffic | Designed only (later milestones; builders dormant) |
 | Live AWS apply, traffic, Azure/GCP parity | Not proved; not in this milestone |
 
 See [docs/product/claims-matrix.md](docs/product/claims-matrix.md).
@@ -72,7 +84,7 @@ See [docs/product/claims-matrix.md](docs/product/claims-matrix.md).
 
 * Restore or copy of `recover/*` archive trees (`81cac81`, `23c7744`)
 * Recreating missing commit `3522e48`
-* Terraform, GitOps, Kubernetes manifests, or example services
+* Terraform, GitOps apply, or a parallel Kustomize workload set
 * Azure or GCP modules
 * Backstage, Crossplane, a service mesh, or AI control planes
 * Graphite, `frictionctl run` / journey proof
@@ -88,6 +100,9 @@ working base and not a backlog to copy.
 git clone <this-repo>
 cd platform-engineering-reference
 make help && make doctor
+go run ./cmd/platform doctor
+go run ./cmd/platform validate testdata/workloadcontract-valid.yaml
+make platform-test
 ```
 
 ## Licence

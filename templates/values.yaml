@@ -1,0 +1,11 @@
+name: sample
+owner: platform
+replicaCount: 1
+image:
+  repository: example.local/sample
+  tag: "0.1.0"
+service:
+  port: 8080
+serviceAccount:
+  name: sample
+  namespace: apps
