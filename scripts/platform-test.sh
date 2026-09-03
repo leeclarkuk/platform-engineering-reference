@@ -48,6 +48,12 @@ assert_nonzero 'wrong kind validate' \
 assert_nonzero 'DNS-1123 name validate' \
   go run ./cmd/platform validate testdata/workloadcontract-invalid-name-dns.yaml
 
+assert_nonzero 'DNS-1123 serviceAccount.namespace validate' \
+  go run ./cmd/platform validate testdata/workloadcontract-invalid-sa-namespace-dns.yaml
+
+assert_nonzero 'DNS-1123 serviceAccount.name validate' \
+  go run ./cmd/platform validate testdata/workloadcontract-invalid-sa-name-dns.yaml
+
 parent="$(mktemp -d)"
 dest="${parent}/widget"
 go run ./cmd/platform create --name widget --owner platform --namespace apps --out-dir "$dest"
@@ -62,5 +68,10 @@ demo_parent="$(mktemp -d)"
 demo_dest="${demo_parent}/out"
 assert_nonzero 'create invalid name Demo' \
   go run ./cmd/platform create --name Demo --owner platform --namespace apps --out-dir "$demo_dest"
+
+ns_parent="$(mktemp -d)"
+ns_dest="${ns_parent}/out"
+assert_nonzero 'create invalid namespace Demo' \
+  go run ./cmd/platform create --name widget --owner platform --namespace Demo --out-dir "$ns_dest"
 
 printf 'ok platform-test\n'

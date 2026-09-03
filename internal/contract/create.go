@@ -48,7 +48,10 @@ func Create(opts CreateOptions) (contractPath string, err error) {
 		return "", fmt.Errorf("create requires --name, --owner and --namespace")
 	}
 	if !validDNS1123Label(name) {
-		return "", fmt.Errorf("--name %q is not a DNS-1123 label (lowercase letters, digits, hyphens)", name)
+		return "", fmt.Errorf("--name %q is not an RFC 1123 DNS label (lowercase letters, digits, hyphens)", name)
+	}
+	if !validDNS1123Label(namespace) {
+		return "", fmt.Errorf("--namespace %q is not an RFC 1123 DNS label (lowercase letters, digits, hyphens)", namespace)
 	}
 	outDir := strings.TrimSpace(opts.OutDir)
 	if outDir == "" {

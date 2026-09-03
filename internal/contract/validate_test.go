@@ -66,6 +66,20 @@ func TestValidateRejectsDNS1123Name(t *testing.T) {
 	}
 }
 
+func TestValidateRejectsDNS1123ServiceAccountNamespace(t *testing.T) {
+	path := testdata(t, "workloadcontract-invalid-sa-namespace-dns.yaml")
+	if err := File(path); err == nil {
+		t.Fatal("expected spec.serviceAccount.namespace Apps to fail validation")
+	}
+}
+
+func TestValidateRejectsDNS1123ServiceAccountName(t *testing.T) {
+	path := testdata(t, "workloadcontract-invalid-sa-name-dns.yaml")
+	if err := File(path); err == nil {
+		t.Fatal("expected spec.serviceAccount.name Demo to fail validation")
+	}
+}
+
 func TestValidateRejectsMissingName(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "missing-name.yaml")
@@ -163,6 +177,21 @@ func TestCreateRejectsInvalidName(t *testing.T) {
 	}
 	if _, err := os.Stat(dir); !os.IsNotExist(err) {
 		t.Fatalf("create must not write DIR when the name is invalid: %v", err)
+	}
+}
+
+func TestCreateRejectsInvalidNamespace(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "out")
+	if _, err := Create(CreateOptions{
+		Name:      "widget",
+		Owner:     "platform",
+		Namespace: "Demo",
+		OutDir:    dir,
+	}); err == nil {
+		t.Fatal("expected create --namespace Demo to fail")
+	}
+	if _, err := os.Stat(dir); !os.IsNotExist(err) {
+		t.Fatalf("create must not write DIR when the namespace is invalid: %v", err)
 	}
 }
 

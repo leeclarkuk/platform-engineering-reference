@@ -58,3 +58,25 @@ func TestCheckSucceedsWithAWSEnvUnset(t *testing.T) {
 		t.Fatalf("output=%q", buf.String())
 	}
 }
+
+func TestCheckDoesNotReadAWSEnv(t *testing.T) {
+	src, err := os.ReadFile("doctor.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, needle := range []string{"os.Getenv", "os.LookupEnv", "os.Environ", "aws-sdk", "github.com/aws"} {
+		if bytes.Contains(src, []byte(needle)) {
+			t.Fatalf("platform doctor must not read cloud env or call AWS; found %q", needle)
+		}
+	}
+	unsetAWSEnv(t)
+	without := Check([]string{"go"})
+	t.Setenv("AWS_ACCESS_KEY_ID", "AKIAFAKE")
+	t.Setenv("AWS_SECRET_ACCESS_KEY", "fake")
+	t.Setenv("AWS_SESSION_TOKEN", "fake")
+	t.Setenv("AWS_PROFILE", "fake")
+	with := Check([]string{"go"})
+	if len(without.Missing) != len(with.Missing) {
+		t.Fatal("doctor result must not depend on AWS credential environment variables")
+	}
+}

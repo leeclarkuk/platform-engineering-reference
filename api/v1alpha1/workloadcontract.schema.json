@@ -25,7 +25,7 @@
           "minLength": 1,
           "maxLength": 63,
           "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
-          "description": "DNS-1123 label: lowercase letters, digits, hyphens"
+          "description": "RFC 1123 DNS label"
         }
       }
     },
@@ -49,11 +49,17 @@
           "properties": {
             "namespace": {
               "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "maxLength": 63,
+              "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+              "description": "RFC 1123 DNS label (ADR-0002 contract string)"
             },
             "name": {
               "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "maxLength": 63,
+              "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+              "description": "RFC 1123 DNS label (ADR-0002 contract string)"
             }
           }
         }

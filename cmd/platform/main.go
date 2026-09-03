@@ -44,8 +44,8 @@ AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN and
 AWS_PROFILE unset.
 validate loads YAML and checks it against the WorkloadContract JSON Schema.
 create writes a WorkloadContract YAML and a Helm chart skeleton into DIR.
-DIR must not already exist. --name must be a DNS-1123 label. It writes
-no Terraform, GitOps, IAM, kubeconfig or secrets.
+DIR must not already exist. --name and --namespace must be RFC 1123 DNS
+labels. It writes no Terraform, GitOps, IAM, kubeconfig or secrets.
 `)
 }
 
@@ -81,9 +81,9 @@ func runValidate(args []string) int {
 func runCreate(args []string) int {
 	fs := flag.NewFlagSet("create", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
-	name := fs.String("name", "", "workload name (DNS-1123; metadata.name and ServiceAccount name)")
+	name := fs.String("name", "", "RFC 1123 DNS label (metadata.name and ServiceAccount name)")
 	owner := fs.String("owner", "", "workload owner")
-	namespace := fs.String("namespace", "", "ServiceAccount namespace (ADR-0002 contract string)")
+	namespace := fs.String("namespace", "", "RFC 1123 DNS label (ServiceAccount namespace; ADR-0002)")
 	outDir := fs.String("out-dir", "", "output directory (must not already exist)")
 	if err := fs.Parse(args); err != nil {
 		return 2
