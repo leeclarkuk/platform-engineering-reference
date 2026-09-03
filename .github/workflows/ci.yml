@@ -1,4 +1,5 @@
-# Platform gates (M0 and M1). No Terraform. No cloud mutation.
+# Platform gates (M0, M1, and Milestone 2 Terraform validate without AWS credentials).
+# No Terraform apply. No cloud mutation. terraform init still downloads providers.
 name: Platform gates
 
 on:
@@ -24,7 +25,10 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      # Record SHA evidence in the job log and step summary. Artifact upload
+      # is not used: it required actions:write, which this workflow does not grant.
       - name: Record SHA evidence
+        id: sha_evidence
         run: |
           set -euo pipefail
           # Do not read workflow_run head_sha here. That field is not populated on pull_request. Collect workflow-run API head_sha externally for the review hand-off and compare it with the reviewed PR head.
@@ -32,15 +36,39 @@ jobs:
           github_sha='${{ github.sha }}'
           event_base_sha='${{ github.event.pull_request.base.sha }}'
           git_head="$(git rev-parse HEAD)"
+          git fetch --quiet --no-tags origin main || true
+          resolved_main_sha="$(git rev-parse origin/main || echo '')"
+          if [[ -z "$(git status --porcelain)" ]]; then
+            worktree_clean=true
+          else
+            worktree_clean=false
+          fi
           printf 'event_name=%s\n' '${{ github.event_name }}'
           printf 'github.ref=%s\n' '${{ github.ref }}'
           printf 'reviewed PR head SHA=%s\n' "${reviewed_pr_head_sha:-n/a}"
           printf 'event checkout SHA (github.sha)=%s\n' "${github_sha}"
           printf 'event base SHA=%s\n' "${event_base_sha:-n/a}"
           printf 'git rev-parse HEAD actually tested=%s\n' "${git_head}"
+          printf 'RESOLVED_MAIN=%s\n' "${resolved_main_sha:-n/a}"
+          printf 'STARTING_HEAD=%s\n' "${git_head}"
+          printf 'WORKTREE_CLEAN=%s\n' "${worktree_clean}"
           if [[ -n "${reviewed_pr_head_sha}" && "${git_head}" != "${reviewed_pr_head_sha}" ]]; then
             printf 'synthetic merge SHA=%s (HEAD is the merge commit, not the PR branch head)\n' "${git_head}"
           fi
+
+          echo "resolved_main=${resolved_main_sha}" >> "$GITHUB_OUTPUT"
+          echo "starting_head=${git_head}" >> "$GITHUB_OUTPUT"
+          echo "worktree_clean=${worktree_clean}" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "RESOLVED_MAIN: ${resolved_main_sha}"
+            echo "STARTING_HEAD: ${git_head}"
+            echo "WORKTREE_CLEAN: ${worktree_clean}"
+            echo "git_rev_parse_HEAD: ${git_head}"
+            echo "github.sha: ${github_sha}"
+            echo "github.event.pull_request.head.sha: ${reviewed_pr_head_sha:-n/a}"
+            echo "github.event.pull_request.base.sha: ${event_base_sha:-n/a}"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Set up Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
@@ -86,6 +114,17 @@ jobs:
 
       - name: Targeted Milestone 0 assertions
         run: make check-m0-assertions
+
+      - name: Set up Terraform (pinned CLI)
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: '1.16.1'
+
+      - name: Milestone 2 offline terraform fmt/init/validate
+        run: |
+          set -euo pipefail
+          env -u AWS_ACCESS_KEY_ID -u AWS_SECRET_ACCESS_KEY -u AWS_SESSION_TOKEN -u AWS_PROFILE \
+            make terraform-validate
 
       - name: Executable cloud-mutation check
         run: make check-no-cloud-mutation

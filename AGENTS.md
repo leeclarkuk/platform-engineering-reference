@@ -6,8 +6,9 @@ Instructions for humans and coding agents working on this repository.
 
 This is a platform engineering **reference**, not a live estate. Milestone 0
 is governance on empty `main` (`1407188`). Milestone 1 adds a WorkloadContract
-schema and a local `platform` CLI. Nothing is live-proved. Do not claim
-production-ready status.
+schema and a local `platform` CLI. Milestone 2 adds AWS foundations Terraform
+under `infra/aws/`, validated locally without cloud credentials. Nothing is
+live-proved. Do not claim production-ready status.
 
 ## Integration owner
 
@@ -17,9 +18,9 @@ implement within path ownership. They do not merge, apply Terraform, or
 open extra pull requests.
 
 The implementation builder writes only after a Lee-approved spec. The
-Milestone 0 single-PR rule is closed (PR #1 merged). Milestone 1 is this one
-new pull request. Do not open a second PR for this layer. Do not merge
-without Lee.
+Milestone 0 single-PR rule is closed (PR #1 merged). Milestone 1 is closed
+on `main` (PR #3). Milestone 2 is this one new pull request. Do not open a
+second PR for this layer. Do not merge without Lee.
 
 `platform-product-builder` owns the authorised Milestone 1
 implementation paths listed in the team table. It does **not** own
@@ -47,7 +48,7 @@ fallback as the operating mode.
 | --- | --- | --- | --- |
 | `specification-architect` | Spec-first architecture gate before implementation | Read-only | none |
 | `platform-product-builder` | Claims, README, gap assessment, and authorised M1 implementation | Write | `api/`, `cmd/`, `internal/`, `templates/`, `testdata/`, `go.mod`, `go.sum`, `README.md`, `docs/product/` (not `AGENTS.md`, `.cursor/agents/`, `Makefile`, or `.github/workflows/`) |
-| `aws-foundations-builder` | AWS foundations later | Dormant; refuse writes outside later `infra/aws/` | future `infra/aws/` only |
+| `aws-foundations-builder` | AWS foundations (Milestone 2) | Write | `infra/aws/` only |
 | `gitops-golden-path-builder` | GitOps later | Dormant; refuse writes outside later `gitops/` | future `gitops/` |
 | `reliability-security-reviewer` | Process-isolated review of ignore rules, pin, CI, secrets | Read-only | none |
 | `evidence-adversarial-reviewer` | Falsify claims without the other reviewer's verdict | Read-only | none |
@@ -61,35 +62,38 @@ a chart skeleton on disk, not a GitOps apply.
 1. `/goal` is spec-first. Invoke `specification-architect` before adding
    or changing ADRs, ownership, or milestone scope. Do not implement first.
 2. Lee approval is required before implementation.
-3. After approval, Milestone 1 is this one new pull request. Do not open
+3. After approval, Milestone 2 is this one new pull request. Do not open
    a second PR. Do not retarget, rebase onto a new branch, or merge unless
    the user says so.
 4. Bounded `/swarm` may fan out specialists inside path ownership. Swarm
-   members must refuse forbidden paths. Dormant AWS and GitOps builders
-   refuse writes outside later `infra/aws/` and `gitops/`.
+   members must refuse forbidden paths. The AWS foundations builder is
+   active for Milestone 2 and writes only under `infra/aws/`. The GitOps
+   builder remains dormant and refuses writes outside later `gitops/`.
 5. `/loop` is verification-only. If a check fails, make the smallest
    correction and rerun. Stop after three unsuccessful attempts.
 
-## Write boundaries (Milestone 1)
+## Write boundaries (Milestone 2)
 
 Allowed: `README.md`, `AGENTS.md`, `Makefile`, `.gitignore`,
 `.github/workflows/`, `.github/dependabot.yml`, `.cursor/agents/`,
 `docs/adr/`, `docs/product/`, `.friction/`, `scripts/`, `api/`, `cmd/`,
-`internal/`, `templates/`, `testdata/`, `go.mod`, `go.sum`. Do not
-change `LICENSE`. Do not stage secret files in the repository.
+`internal/`, `templates/`, `testdata/`, `go.mod`, `go.sum`, `infra/aws/`.
+Do not change `LICENSE`. Do not stage secret files in the repository.
 
-Forbidden: `infra/`, `terraform/`, `landing-zones/`, `gitops/`,
-`kubernetes/` (except Helm files under `templates/`), `examples/`,
-`developer-platform/` copied from archive; checkout/cherry-pick/copy of
-`81cac81` or `23c7744`; recreating `3522e48`; Azure/GCP modules;
-Backstage; Crossplane; mesh; AI; runnable Terraform/OpenTofu apply or
-destroy; empty directories with no file; overlapping Terraform and GitOps
-objects; Graphite; `frictionctl run` / journey proof.
+Forbidden: `infra/` except `infra/aws/`, `terraform/`, `landing-zones/`,
+`gitops/`, `kubernetes/` (except Helm files under `templates/`),
+`examples/`, `developer-platform/` copied from archive;
+checkout/cherry-pick/copy of `81cac81` or `23c7744`; recreating `3522e48`;
+Azure/GCP modules; Backstage; Crossplane; mesh; AI; runnable
+Terraform/OpenTofu apply or destroy; empty directories with no file;
+overlapping Terraform and GitOps objects; Graphite; `frictionctl run` /
+journey proof.
 
 `recover/*` is archive only.
 
-AWS and GitOps builders remain dormant. They must refuse writes outside
-later `infra/aws/` and `gitops/`.
+The AWS foundations builder is active for Milestone 2 and must refuse
+writes outside `infra/aws/`. The GitOps builder remains dormant and must
+refuse writes outside later `gitops/`.
 
 ## Review gates
 
@@ -98,6 +102,11 @@ later `infra/aws/` and `gitops/`.
   `make friction-pin-verify` (no cloud credentials).
 * `make platform-test` (`go test ./...` plus CLI positive/negative
   checks; `platform doctor` with AWS credential env unset).
+* `make terraform-validate` (fmt, boundary and trust checks, then
+  `terraform init -backend=false -lockfile=readonly` and
+  `terraform validate` for the three `infra/aws/` roots, AWS credentials
+  unset). Init still downloads the locked AWS provider; this is not
+  air-gapped.
 * Secret scan in CI. Executable files under `.github/workflows/`,
   `Makefile`, and `scripts/` must not contain runnable Terraform/OpenTofu
   apply or destroy, `kubectl apply`, or Helm install/upgrade.
@@ -148,5 +157,6 @@ INTEGRATION NOTES
 
 Dirty unrelated files; urge to copy archive trees; recreating `3522e48`;
 cloud credentials required; overlapping Terraform/GitOps in the PR;
-opening a second pull request; dormant builders writing outside later
-`infra/aws/` and `gitops/`; three consecutive failed verification loops.
+opening a second pull request; AWS foundations builder writing outside
+`infra/aws/`; GitOps builder writing outside later `gitops/`; three
+consecutive failed verification loops.
