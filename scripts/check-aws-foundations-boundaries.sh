@@ -30,7 +30,7 @@ scan_aws_root() {
   local tf_file rel top roots_file got
 
   if [[ ! -d "${aws_root}" ]]; then
-    printf 'FAIL: missing aws root at %s\n' "${aws_root}" >&2
+    printf 'FAIL: missing aws-root at %s\n' "${aws_root}" >&2
     return 1
   fi
 
@@ -39,7 +39,7 @@ scan_aws_root() {
     [[ -n "${tf_file}" ]] || continue
     rel="${tf_file#"${aws_root}"/}"
     if [[ "${rel}" != */* ]]; then
-      printf 'FAIL extra Terraform file at aws root (not a permitted nested root): %s\n' "${rel}" >&2
+      printf 'FAIL extra Terraform file at aws-root (not a permitted nested root): %s\n' "${rel}" >&2
       fail=1
       continue
     fi

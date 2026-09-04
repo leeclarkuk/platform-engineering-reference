@@ -5,3 +5,6 @@ helm install sample ./chart
 terraform apply
 argocd app sync sample
 aws s3 rm s3://example-bucket/prefix --recursive
+aws cloudformation deploy
+aws organizations create-account
+aws lambda update-function-code

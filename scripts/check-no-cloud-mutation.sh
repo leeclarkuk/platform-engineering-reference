@@ -13,12 +13,6 @@ kc="kubectl"
 hm="helm"
 ad="argocd"
 aw="aws"
-s3="s3"
-ec2="ec2"
-iam="iam"
-eks="eks"
-sts="sts"
-kms="kms"
 ap="apply"
 ds="destroy"
 ins="install"
@@ -51,7 +45,7 @@ while IFS= read -r -d '' f; do
     -e "${kc}[[:space:]]+${ap}" \
     -e "${hm}[[:space:]]+(${ins}|${up})" \
     -e "${ad}[[:space:]]+app[[:space:]]+${sy}" \
-    -e "(^|[[:space:]])${aw}[[:space:]]+(${s3}|${ec2}|${iam}|${eks}|${sts}|${kms})[[:space:]]" \
+    -e "(^|[[:space:]])${aw}[[:space:]]" \
     || true)"
   if [[ -n "$hits" ]]; then
     printf 'FAIL runnable cloud-mutation command in %s\n' "$f" >&2
