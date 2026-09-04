@@ -83,9 +83,25 @@ var requiredM4Fixtures = []m4Fixture{
 	{name: "live-mutation-in-validation", kind: "mutation"},
 }
 
+// Extra named negatives for the gate-only correction: deep AppProject
+// wildcards and non-Git/Helm-path Application renderers. Each must fail
+// for the named reason, not merely as an unknown extra directory.
+var requiredM4HardenFixtures = []m4HardenFixture{
+	{name: "appproject-roles-wildcard", kind: "tree", reason: "wildcard"},
+	{name: "source-plugin", kind: "tree", reason: "source.plugin"},
+	{name: "source-directory", kind: "tree", reason: "source.directory"},
+	{name: "source-kustomize", kind: "tree", reason: "source.kustomize"},
+}
+
 type m4Fixture struct {
 	name string
 	kind string
+}
+
+type m4HardenFixture struct {
+	name   string
+	kind   string
+	reason string
 }
 
 type object struct {
@@ -181,7 +197,21 @@ func main() {
 	if len(requiredM4Fixtures) != 20 {
 		fail("internal error: required M4 fixtures want 20, got %d", len(requiredM4Fixtures))
 	}
-	fmt.Println("ok gitops M4 named fixtures (twenty committed; tree/helm executed here)")
+	for _, fx := range requiredM4HardenFixtures {
+		path := filepath.Join(m4Root, fx.name)
+		if st, err := os.Stat(path); err != nil || !st.IsDir() {
+			fail("missing required M4 harden fixture directory %s", fx.name)
+		}
+		err := checkTree(path)
+		if err == nil {
+			fail("M4 harden fixture %s: wanted non-zero, got pass", fx.name)
+		}
+		if !strings.Contains(err.Error(), fx.reason) {
+			fail("M4 harden fixture %s: wanted reason containing %q, got %v", fx.name, fx.reason, err)
+		}
+		fmt.Printf("ok M4 harden fixture %s failed as required (%s): %v\n", fx.name, fx.reason, err)
+	}
+	fmt.Println("ok gitops M4 named fixtures (twenty committed; tree/helm executed here; harden fixtures executed)")
 }
 
 func fail(format string, args ...any) {
@@ -305,11 +335,26 @@ func checkTree(dir string) error {
 		default:
 			return fmt.Errorf("unexpected kind %s (%s/%s) in %s", o.Kind, o.APIVersion, o.Name, o.Source)
 		}
+		if o.Kind == "AppProject" {
+			if err := rejectAppProjectSpecWildcards(o); err != nil {
+				return err
+			}
+		}
+		if o.Kind == "Application" {
+			if err := rejectApplicationRenderers(o); err != nil {
+				return err
+			}
+		}
 		if err := rejectWildcards(o); err != nil {
 			return err
 		}
 		if err := rejectClusterResourceWhitelist(o); err != nil {
 			return err
+		}
+		if o.Kind == "AppProject" || o.Kind == "Application" {
+			if err := rejectUnknownObjectFields(o); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -629,6 +674,139 @@ func rejectClusterResourceWhitelist(o *object) error {
 		return fmt.Errorf("AppProject %s sets clusterResourceWhitelist (forbidden for any contents)", o.Name)
 	}
 	return nil
+}
+
+func rejectAppProjectSpecWildcards(o *object) error {
+	spec := o.Raw["spec"]
+	if spec == nil {
+		return nil
+	}
+	return walkAnyWildcard(o, spec, "spec")
+}
+
+func walkAnyWildcard(o *object, v any, path string) error {
+	switch t := v.(type) {
+	case string:
+		if strings.Contains(t, "*") {
+			return fmt.Errorf("AppProject %s wildcard in %s: %q", o.Name, path, t)
+		}
+	case []any:
+		for i, item := range t {
+			if err := walkAnyWildcard(o, item, fmt.Sprintf("%s[%d]", path, i)); err != nil {
+				return err
+			}
+		}
+	case map[string]any:
+		for k, item := range t {
+			if strings.Contains(k, "*") {
+				return fmt.Errorf("AppProject %s wildcard in %s key %q", o.Name, path, k)
+			}
+			if err := walkAnyWildcard(o, item, path+"."+k); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func rejectApplicationRenderers(o *object) error {
+	spec := mapOf(o.Raw["spec"])
+	src := mapOf(spec["source"])
+	if src == nil {
+		return nil
+	}
+	for _, key := range []string{"plugin", "directory", "kustomize"} {
+		if _, ok := src[key]; ok {
+			return fmt.Errorf("%s source.%s is a non-Git/Helm-path renderer", o.Name, key)
+		}
+	}
+	return nil
+}
+
+type fieldSchema struct {
+	keys   map[string]bool
+	nested map[string]*fieldSchema
+}
+
+func rejectUnknownObjectFields(o *object) error {
+	var schema *fieldSchema
+	switch o.Kind {
+	case "AppProject":
+		schema = appProjectSchema
+	case "Application":
+		schema = applicationSchema
+	default:
+		return nil
+	}
+	return rejectUnknownMap(o.Raw, schema, o.Kind+"/"+o.Name)
+}
+
+func rejectUnknownMap(m map[string]any, schema *fieldSchema, path string) error {
+	if schema == nil {
+		return nil
+	}
+	for k, v := range m {
+		if !schema.keys[k] {
+			return fmt.Errorf("unknown field %s.%s", path, k)
+		}
+		child := schema.nested[k]
+		if child == nil {
+			continue
+		}
+		if nested := mapOf(v); nested != nil {
+			if err := rejectUnknownMap(nested, child, path+"."+k); err != nil {
+				return err
+			}
+			continue
+		}
+		items, ok := v.([]any)
+		if !ok {
+			continue
+		}
+		for i, item := range items {
+			im := mapOf(item)
+			if im == nil {
+				continue
+			}
+			if err := rejectUnknownMap(im, child, fmt.Sprintf("%s.%s[%d]", path, k, i)); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+var appProjectSchema = &fieldSchema{
+	keys: map[string]bool{"apiVersion": true, "kind": true, "metadata": true, "spec": true},
+	nested: map[string]*fieldSchema{
+		"metadata": {keys: map[string]bool{"name": true, "namespace": true}},
+		"spec": {
+			keys: map[string]bool{
+				"description":                true,
+				"sourceRepos":                true,
+				"destinations":               true,
+				"namespaceResourceWhitelist": true,
+			},
+			nested: map[string]*fieldSchema{
+				"destinations":               {keys: map[string]bool{"server": true, "namespace": true}},
+				"namespaceResourceWhitelist": {keys: map[string]bool{"group": true, "kind": true}},
+			},
+		},
+	},
+}
+
+var applicationSchema = &fieldSchema{
+	keys: map[string]bool{"apiVersion": true, "kind": true, "metadata": true, "spec": true},
+	nested: map[string]*fieldSchema{
+		"metadata": {keys: map[string]bool{"name": true, "namespace": true}},
+		"spec": {
+			keys: map[string]bool{"project": true, "source": true, "destination": true},
+			nested: map[string]*fieldSchema{
+				"source":      {keys: map[string]bool{"repoURL": true, "targetRevision": true, "path": true}},
+				"destination": {keys: map[string]bool{"server": true, "namespace": true}},
+			},
+		},
+	},
 }
 
 func rejectWildcards(o *object) error {

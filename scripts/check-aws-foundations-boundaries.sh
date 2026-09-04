@@ -113,6 +113,20 @@ assert_nonzero_scan() {
 }
 
 real_root="${root}/infra/aws"
+
+# Fixture-only mode: scan the given aws-root path(s) and return that result.
+# Used to execute testdata/gitops-m4-negatives/k8s-helm-under-terraform.
+# Default (no args) still scans live infra/aws plus M2 fixtures.
+if [[ $# -gt 0 ]]; then
+  rc=0
+  for p in "$@"; do
+    if ! scan_aws_root "${p}"; then
+      rc=1
+    fi
+  done
+  exit "${rc}"
+fi
+
 scan_aws_root "${real_root}"
 
 fixtures="${root}/testdata/aws-foundations-boundaries"

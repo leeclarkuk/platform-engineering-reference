@@ -26,3 +26,12 @@ fails if any of these exits 0.
 | iam-or-terraform-under-gitops | IAM or Terraform under gitops |
 | k8s-helm-under-terraform | K8s/Helm providers/resources under Terraform |
 | live-mutation-in-validation | Live kubectl/Helm install/Argo sync/Terraform apply/AWS mutation path |
+
+Harden fixtures (gate correction; each must fail for the named reason):
+
+| Dir | Behaviour |
+| --- | --- |
+| appproject-roles-wildcard | AppProject spec.roles[].policies[] wildcard (full-spec scan) |
+| source-plugin | Application source.plugin renderer with path templates |
+| source-directory | Application source.directory renderer with path templates |
+| source-kustomize | Application source.kustomize renderer with path templates |

@@ -348,10 +348,13 @@ printf 'ok kubeconform helm render (Deployment, Service, ServiceAccount; local s
 
 "$root/scripts/check-gitops-semantics.sh" "$render_dir/helm.yaml"
 
-# Named negatives 19 and 20: existing Terraform K8s/Helm boundary check, and
-# mutation-path fixture executed by the cloud-mutation scanner.
+# Named negative 19: execute the exact M4 Terraform fixture. Do not treat
+# the M2 fixture suite as a substitute. Named negative 20: mutation path.
 "$root/scripts/check-aws-foundations-boundaries.sh"
-printf 'ok named negative k8s-helm-under-terraform (existing M2 checker)\n'
+printf 'ok existing M2 Terraform K8s/Helm boundary check\n'
+
+assert_nonzero 'k8s-helm-under-terraform' \
+  "$root/scripts/check-aws-foundations-boundaries.sh" "$m4_neg/k8s-helm-under-terraform"
 
 assert_nonzero 'live-mutation-in-validation' \
   "$root/scripts/check-no-cloud-mutation.sh" "$m4_neg/live-mutation-in-validation"
