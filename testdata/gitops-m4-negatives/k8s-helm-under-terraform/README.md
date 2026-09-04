@@ -1,0 +1,1 @@
+Named M4 negative 19. Executed by scripts/check-aws-foundations-boundaries.sh against testdata/aws-foundations-boundaries/kubernetes and helm, and present here as a committed kubernetes provider fixture.

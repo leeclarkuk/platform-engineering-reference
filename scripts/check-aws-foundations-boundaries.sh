@@ -30,7 +30,7 @@ scan_aws_root() {
   local tf_file rel top roots_file got
 
   if [[ ! -d "${aws_root}" ]]; then
-    printf 'FAIL: missing aws root at %s\n' "${aws_root}" >&2
+    printf 'FAIL: missing aws-root at %s\n' "${aws_root}" >&2
     return 1
   fi
 
@@ -39,7 +39,7 @@ scan_aws_root() {
     [[ -n "${tf_file}" ]] || continue
     rel="${tf_file#"${aws_root}"/}"
     if [[ "${rel}" != */* ]]; then
-      printf 'FAIL extra Terraform file at aws root (not a permitted nested root): %s\n' "${rel}" >&2
+      printf 'FAIL extra Terraform file at aws-root (not a permitted nested root): %s\n' "${rel}" >&2
       fail=1
       continue
     fi
@@ -113,6 +113,20 @@ assert_nonzero_scan() {
 }
 
 real_root="${root}/infra/aws"
+
+# Fixture-only mode: scan the given aws-root path(s) and return that result.
+# Used to execute testdata/gitops-m4-negatives/k8s-helm-under-terraform.
+# Default (no args) still scans live infra/aws plus M2 fixtures.
+if [[ $# -gt 0 ]]; then
+  rc=0
+  for p in "$@"; do
+    if ! scan_aws_root "${p}"; then
+      rc=1
+    fi
+  done
+  exit "${rc}"
+fi
+
 scan_aws_root "${real_root}"
 
 fixtures="${root}/testdata/aws-foundations-boundaries"
