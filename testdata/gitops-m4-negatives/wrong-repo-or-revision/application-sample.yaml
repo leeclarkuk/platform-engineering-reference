@@ -1,0 +1,14 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: sample
+  namespace: argocd
+spec:
+  project: platform
+  source:
+    repoURL: https://github.com/leeclarkuk/platform-engineering-reference
+    targetRevision: not-main
+    path: templates
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: apps
