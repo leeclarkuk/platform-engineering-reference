@@ -1,0 +1,9 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - bootstrap/namespace-argocd.yaml
+  - bootstrap/namespace-apps.yaml
+  - bootstrap/appproject-bootstrap.yaml
+  - bootstrap/appproject-platform.yaml
+  - bootstrap/application-gitops-root.yaml
+  - apps

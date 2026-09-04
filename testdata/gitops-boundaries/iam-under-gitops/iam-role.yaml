@@ -1,0 +1,7 @@
+apiVersion: iam.amazonaws.com/v1alpha1
+kind: IAMRole
+metadata:
+  name: forbidden
+  namespace: argocd
+spec:
+  description: fixture must fail the GitOps IAM boundary

@@ -21,19 +21,24 @@ gates that need no cloud credentials:
 
 * what is designed versus what has been run locally
 * ownership law for Terraform versus Argo CD (no overlapping objects)
-* agent operating model (Grok-only, process-isolated review; M0 single-PR
-  closed; M1 is one new PR)
+* agent operating model (Grok-only, process-isolated review; M0-M2 closed;
+  M3 is one new PR)
 * `make help` and `make doctor`
 * `make platform-test` (Go tests plus CLI positive/negative checks)
 * `platform doctor`, `platform validate`, and `platform create` (local CLI)
 * a WorkloadContract JSON Schema with valid and invalid fixtures
 * one Helm chart skeleton under `templates/` (files on disk, not a deploy)
+* `make terraform-validate` for the three `infra/aws/` roots (fmt, init
+  without a backend, validate; AWS credentials unset)
+* `make gitops-validate` for `gitops/` (kustomize render, kubeconform with
+  committed local schemas, field-level semantic checks)
 * CI denylist so Terraform state and keys cannot be tracked unnoticed by CI
 * a recorded pin for `frictionctl` module tag `v0.1.0` with Go module sums
   verified (`frictionctl version` is exactly `0.1.0`; journeys are **not**
   proved)
 
-That is all. No cluster, no account, no live workload path, no live traffic.
+That is all. No live cluster, no applied account, no synced Argo CD app,
+no live workload path, no live traffic.
 
 ## What runs locally
 
@@ -41,6 +46,8 @@ That is all. No cluster, no account, no live workload path, no live traffic.
 make help && make doctor
 make check-prohibited
 make platform-test
+make terraform-validate
+make gitops-validate
 make friction-pin-verify
 ```
 
@@ -49,34 +56,42 @@ tools (`git`, `make`). It does not call AWS. It does not need credentials.
 `platform doctor` additionally requires `go`. It succeeds with AWS
 credential environment variables unset. It does not call AWS.
 `make platform-test` runs `go test ./...` and CLI positive/negative checks.
+`make terraform-validate` does not need AWS credentials. `terraform init
+-backend=false` still downloads the locked AWS provider.
+`make gitops-validate` may install pinned kustomize and kubeconform over
+the network, then validates only from committed files. It does not apply,
+does not call kubectl, and does not talk to a cluster.
 `make friction-pin-verify` uses `go mod download -json` (not a sumdb curl)
 and does not run journeys.
 
 CI on pull requests runs those gates, `make platform-test`, a negative
 doctor case, the prohibited-path stdin0 suite, targeted operating-model
-assertions, and a Gitleaks scan. CI does not run Terraform.
+assertions, `make terraform-validate`, `make gitops-validate`, and a
+Gitleaks scan. CI does not apply Terraform and does not apply GitOps.
 
 ## What costs money
 
-Nothing yet. There is no `infra/`, no Terraform apply, and no cloud
-resource in this tree. Cost starts when a later milestone adds an AWS
-slice and someone applies it on purpose.
+Nothing yet. Terraform and GitOps files exist as desired state on disk.
+There is no apply target. Cost starts when someone applies AWS resources
+on purpose in a later, authorised step.
 
 ## Designed versus proved
 
 | Item | Status |
 | --- | --- |
 | Product claims and gap assessment | Written; locally readable |
-| ADRs for source of truth, ownership, AWS-first, Helm-only golden path, exclusions, frictionctl pin, agent operating model, platform contract and CLI | Written (0001-0005 remain Accepted; 0008 is this milestone) |
+| ADRs for source of truth, ownership, AWS-first, Helm-only golden path, exclusions, frictionctl pin, agent operating model, platform contract and CLI, AWS foundations roots, GitOps bootstrap | Written (0001-0005 remain Accepted; 0010 is this milestone) |
 | `make help` / `make doctor` | Locally proved |
 | `platform doctor` / `platform validate` / `platform create` | Locally proved when those commands are run |
 | WorkloadContract schema and fixtures | Locally proved by `go test` and `platform validate` |
 | Helm chart skeleton under `templates/` | Files on disk; not a deploy; not live proved |
+| `infra/aws` Terraform roots | Locally proved by `make terraform-validate`; not live proved |
+| GitOps bootstrap under `gitops/` | Locally proved by `make gitops-validate`; not live proved; `gitops/apps` has no M4 Application |
 | Tracked-file denylist in CI | Locally runnable; CI-asserted |
 | Secret scan in CI | Designed to run on GitHub; not a live-cloud proof |
 | frictionctl v0.1.0 pin + module-sum verify | Recorded and verifiable; journeys not proved |
-| AWS landing zone, EKS, GitOps apply, sample workload traffic | Designed only (later milestones; builders dormant) |
-| Live AWS apply, traffic, Azure/GCP parity | Not proved; not in this milestone |
+| Live AWS apply, synced Argo CD, sample workload traffic | Not proved; not in this milestone |
+| Azure/GCP parity | Not proved; not in this milestone |
 
 See [docs/product/claims-matrix.md](docs/product/claims-matrix.md).
 
@@ -84,11 +99,13 @@ See [docs/product/claims-matrix.md](docs/product/claims-matrix.md).
 
 * Restore or copy of `recover/*` archive trees (`81cac81`, `23c7744`)
 * Recreating missing commit `3522e48`
-* Terraform, GitOps apply, or a parallel Kustomize workload set
+* A parallel Kustomize workload set for the Helm golden path
 * Azure or GCP modules
 * Backstage, Crossplane, a service mesh, or AI control planes
 * Graphite, `frictionctl run` / journey proof
 * Any deploy/apply/destroy Make target
+* Auto-sync on Application `gitops-root`
+* Milestone 4 Applications under `gitops/apps/`
 
 Archive branches `recover/aws-vertical-slice-2026-08-18` and
 `recover/aws-ci-fixes-2026-08-18` are **archive only**. They are not a
@@ -103,6 +120,7 @@ make help && make doctor
 go run ./cmd/platform doctor
 go run ./cmd/platform validate testdata/workloadcontract-valid.yaml
 make platform-test
+make gitops-validate
 ```
 
 ## Licence

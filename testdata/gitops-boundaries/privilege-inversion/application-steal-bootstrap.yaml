@@ -1,0 +1,14 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: steal-bootstrap
+  namespace: argocd
+spec:
+  project: platform
+  source:
+    repoURL: https://github.com/leeclarkuk/platform-engineering-reference
+    targetRevision: main
+    path: gitops/bootstrap
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd

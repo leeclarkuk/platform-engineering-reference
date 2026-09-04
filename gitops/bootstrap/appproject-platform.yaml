@@ -1,0 +1,12 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: platform
+  namespace: argocd
+spec:
+  description: Unprivileged platform workloads. No Milestone 3 Application uses this project.
+  sourceRepos:
+    - https://github.com/leeclarkuk/platform-engineering-reference
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: apps
