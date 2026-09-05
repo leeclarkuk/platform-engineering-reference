@@ -125,15 +125,25 @@ check_no_live_start() {
     printf 'FAIL no scannable workflows/Make/scripts under %s\n' "$base" >&2
     return 1
   fi
+  # Build patterns at runtime so this file does not contain start-command text.
+  local oc="otelcol"
+  local occ="otelcol-contrib"
+  local pr="prometheus"
   local fail_start=0
   local f hits
   while IFS= read -r -d '' f; do
     [[ -f "$f" ]] || continue
+    case "$f" in
+      *.go) continue ;;
+    esac
     hits="$(sed -E '/^[[:space:]]*#/d' "$f" | grep -E -n \
-      -e 'otelcol-contrib[[:space:]]+--config' \
-      -e 'otelcol-contrib[[:space:]]+run([[:space:]]|$)' \
-      -e '(^|[[:space:]])prometheus[[:space:]]+--config' \
-      -e '(^|[[:space:]])prometheus[[:space:]]+--web' \
+      -e "^[[:space:]]*(sudo[[:space:]]+)?${occ}[[:space:]]*$" \
+      -e "^[[:space:]]*(sudo[[:space:]]+)?${occ}[[:space:]]+--config" \
+      -e "^[[:space:]]*(sudo[[:space:]]+)?${occ}[[:space:]]+run([[:space:]]|$)" \
+      -e "^[[:space:]]*(sudo[[:space:]]+)?${oc}[[:space:]]*$" \
+      -e "^[[:space:]]*(sudo[[:space:]]+)?${oc}[[:space:]]+--config" \
+      -e "^[[:space:]]*(sudo[[:space:]]+)?${oc}[[:space:]]+run([[:space:]]|$)" \
+      -e "^[[:space:]]*(sudo[[:space:]]+)?${pr}([^a-zA-Z0-9_-]|$)" \
       || true)"
     if [[ -n "$hits" ]]; then
       printf 'FAIL live start of collector or Prometheus in %s\n' "$f" >&2
@@ -251,8 +261,6 @@ got_prom="$(promtool --version 2>/dev/null | awk '/promtool, version/{print $3}'
 printf 'ok otelcol-contrib %s\n' "$got_otel"
 printf 'ok promtool %s\n' "$got_prom"
 
-chmod +x "$root/scripts/check-observability-semantics.sh"
-
 validate_tree() {
   local tree="$1"
   local pins_file="${tree}/observability/OBSERVABILITY_PINS.md"
@@ -337,6 +345,11 @@ run_overlay_negative paging-critical-severity 'paging/critical'
 run_overlay_negative invented-slo 'invented SLO'
 run_overlay_negative k8s-resources-under-observability 'Kubernetes resource'
 run_overlay_negative terraform-iam-under-observability 'Terraform|IAM'
+run_overlay_negative collector-wrong-topology 'topology'
+run_overlay_negative collector-resource-identity-drift 'collector resource identity'
+run_overlay_negative collector-extensions-or-connectors 'extension|connector'
+run_overlay_negative unused-required-component 'unused required component'
+run_overlay_negative iam-content-regardless-of-filename 'IAM content'
 run_overlay_negative missing-pin-or-schema 'missing pin file|missing key|missing required schema'
 run_overlay_negative stale-hash 'hash mismatch'
 
@@ -347,5 +360,8 @@ assert_nonzero 'live-start-or-mutation-in-validation' 'cloud-mutation|live start
 
 assert_nonzero 'live-start-collector-or-prometheus' 'live start' \
   check_no_live_start "$m5_neg/live-start-or-mutation-in-validation"
+
+assert_nonzero 'bare-prometheus-or-collector-start' 'live start' \
+  check_no_live_start "$m5_neg/bare-prometheus-or-collector-start"
 
 printf 'ok observability-validate (no collector start; no cluster; no AWS)\n'

@@ -435,8 +435,17 @@ func (g *gate) checkCollector() {
 	if _, ok := exporters["prometheus"]; !ok {
 		g.failf("invalid collector config: prometheus exporter is required")
 	}
+	if len(asMap(m["extensions"])) > 0 {
+		g.failf("collector extensions are forbidden")
+	}
+	if len(asMap(m["connectors"])) > 0 {
+		g.failf("collector connectors are forbidden")
+	}
 
 	svc := asMap(m["service"])
+	if len(asStringSlice(svc["extensions"])) > 0 {
+		g.failf("collector extensions are forbidden")
+	}
 	pipes := asMap(svc["pipelines"])
 	if pipes["logs"] != nil {
 		g.failf("logs pipeline is forbidden")
@@ -453,8 +462,73 @@ func (g *gate) checkCollector() {
 		}
 	}
 	metrics := asMap(pipes["metrics"])
-	if !stringSliceHas(asStringSlice(metrics["receivers"]), "otlp") {
-		g.failf("invalid collector config: metrics pipeline must use otlp receiver")
+	wantReceivers := []string{"otlp"}
+	wantProcessors := []string{"memory_limiter", "resource", "batch"}
+	gotReceivers := asStringSlice(metrics["receivers"])
+	gotProcessors := asStringSlice(metrics["processors"])
+	gotExporters := asStringSlice(metrics["exporters"])
+	if !slicesEqual(gotReceivers, wantReceivers) {
+		g.failf("invalid collector topology: metrics receivers want %v got %v", wantReceivers, gotReceivers)
+	}
+	if !slicesEqual(gotProcessors, wantProcessors) {
+		g.failf("invalid collector topology: metrics processors want %v got %v", wantProcessors, gotProcessors)
+	}
+	if !stringSliceHas(gotExporters, "prometheus") {
+		g.failf("invalid collector topology: metrics pipeline must export prometheus")
+	}
+	for _, name := range gotExporters {
+		if !allowedExporters[name] {
+			g.failf("invalid collector topology: exporter %s is not allowed", name)
+		}
+	}
+
+	usedReceivers := sliceSet(gotReceivers)
+	usedProcessors := sliceSet(gotProcessors)
+	usedExporters := sliceSet(gotExporters)
+	for name := range receivers {
+		if allowedReceivers[name] && !usedReceivers[name] {
+			g.failf("unused required component: receiver %s is declared but not in the metrics pipeline", name)
+		}
+	}
+	for name := range processors {
+		if allowedProcessors[name] && !usedProcessors[name] {
+			g.failf("unused required component: processor %s is declared but not in the metrics pipeline", name)
+		}
+	}
+	if _, ok := exporters["prometheus"]; ok && !usedExporters["prometheus"] {
+		g.failf("unused required component: exporter prometheus is declared but not in the metrics pipeline")
+	}
+
+	g.checkCollectorResourceIdentity(processors)
+}
+
+func (g *gate) checkCollectorResourceIdentity(processors map[string]any) {
+	res := asMap(processors["resource"])
+	items, _ := res["attributes"].([]any)
+	got := map[string]string{}
+	for _, item := range items {
+		am := asMap(item)
+		key := asString(am["key"])
+		if key == "" {
+			continue
+		}
+		got[key] = asString(am["value"])
+	}
+	want := map[string]string{
+		attrServiceName: sampleName,
+		attrServiceNS:   nsApps,
+		attrServiceVer:  svcVersion,
+		attrEnvName:     envLocal,
+	}
+	for key, wantVal := range want {
+		if got[key] != wantVal {
+			g.failf("collector resource identity: %s=%q want %q", key, got[key], wantVal)
+		}
+	}
+	for key := range got {
+		if _, ok := want[key]; !ok {
+			g.failf("collector resource identity: extra attr %s is forbidden", key)
+		}
 	}
 }
 
@@ -556,6 +630,14 @@ func (g *gate) scanObservabilityTree() {
 		rel, _ := filepath.Rel(obs, path)
 		base := strings.ToLower(filepath.Base(path))
 		ext := strings.ToLower(filepath.Ext(path))
+		raw, readErr := os.ReadFile(path)
+		if readErr != nil {
+			g.failf("cannot read %s: %v", rel, readErr)
+			return nil
+		}
+		if hasIAMContent(raw) {
+			g.failf("IAM content under observability/ is forbidden: %s", rel)
+		}
 		if ext == ".tf" || strings.HasSuffix(base, ".tf.json") || strings.Contains(base, "terraform") {
 			g.failf("Terraform under observability/ is forbidden: %s", rel)
 			return nil
@@ -565,10 +647,6 @@ func (g *gate) scanObservabilityTree() {
 			return nil
 		}
 		if ext != ".yaml" && ext != ".yml" {
-			return nil
-		}
-		raw, err := os.ReadFile(path)
-		if err != nil {
 			return nil
 		}
 		dec := yaml.NewDecoder(strings.NewReader(string(raw)))
@@ -696,6 +774,47 @@ func asStringSlice(v any) []string {
 func stringSliceHas(items []string, want string) bool {
 	for _, i := range items {
 		if i == want {
+			return true
+		}
+	}
+	return false
+}
+
+func slicesEqual(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func sliceSet(items []string) map[string]bool {
+	out := map[string]bool{}
+	for _, i := range items {
+		out[i] = true
+	}
+	return out
+}
+
+func hasIAMContent(raw []byte) bool {
+	lower := strings.ToLower(string(raw))
+	needles := []string{
+		"aws_iam_",
+		"iam.amazonaws.com",
+		"iamrole",
+		"aws::iam",
+		"sts:assumerole",
+		`"action": "iam:`,
+		"action: iam:",
+		"aws_iam_role",
+		"aws_iam_policy",
+	}
+	for _, n := range needles {
+		if strings.Contains(lower, n) {
 			return true
 		}
 	}
