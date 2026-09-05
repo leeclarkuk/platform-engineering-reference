@@ -244,7 +244,7 @@ install_pinned_otelcol
 install_pinned_promtool
 export PATH="$cache_dir:$PATH"
 
-got_otel="$(otelcol-contrib version 2>/dev/null | awk '{print $3}')"
+got_otel="$(otelcol-contrib --version 2>/dev/null | awk '{print $3}')"
 [[ "$got_otel" == "$otel_version" ]] || fail "otelcol-contrib version ${got_otel} != ${otel_version}"
 got_prom="$(promtool --version 2>/dev/null | awk '/promtool, version/{print $3}')"
 [[ "$got_prom" == "$prom_version" ]] || fail "promtool version ${got_prom} != ${prom_version}"
