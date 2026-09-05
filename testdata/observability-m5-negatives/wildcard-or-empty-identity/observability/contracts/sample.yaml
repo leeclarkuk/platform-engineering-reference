@@ -1,0 +1,29 @@
+apiVersion: platform.engineering.reference/v1alpha1
+kind: ObservabilityContract
+metadata:
+  name: '*'
+spec:
+  contractVersion: "0.1.0"
+  owner: platform
+  workloadRef:
+    name: sample
+    namespace: apps
+  openTelemetry:
+    resourceAttributes:
+      service.name: sample
+      service.namespace: apps
+      service.version: "0.1.0"
+      deployment.environment.name: local-design
+  prometheus:
+    job: sample
+    metrics:
+      - name: up
+        labels:
+          - job
+          - instance
+  alerts:
+    maxSeverity: warning
+    owner: platform
+  artifacts:
+    collectorConfig: observability/otel/collector-metrics.yaml
+    prometheusRules: observability/prometheus/rules/sample.yml

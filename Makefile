@@ -16,7 +16,7 @@ OUT_DIR ?=
 .PHONY: help doctor check-prohibited check-prohibited-stdin0 \
 	check-m0-assertions check-no-cloud-mutation friction-pin-verify \
 	platform-doctor platform-validate platform-create platform-test test \
-	terraform-validate gitops-validate
+	terraform-validate gitops-validate observability-validate
 
 help: ## Show available targets
 	@awk 'BEGIN {FS = ":.*##"; printf "\nTargets:\n"} \
@@ -26,6 +26,7 @@ help: ## Show available targets
 	@printf '%s\n' 'Milestone 2 adds offline make terraform-validate for infra/aws.'
 	@printf '%s\n' 'Milestone 3 adds offline make gitops-validate for gitops/.'
 	@printf '%s\n' 'Milestone 4 adds Application sample and Helm lint/template to gitops-validate.'
+	@printf '%s\n' 'Milestone 5 adds offline make observability-validate for observability/.'
 	@printf '%s\n' 'No deploy, apply or destroy target exists.'
 	@printf '%s\n' 'Doctor does not use cloud credentials and does not call AWS.'
 	@printf '%s\n' 'friction-pin-verify does not run journeys.'
@@ -125,6 +126,7 @@ check-m0-assertions: ## Targeted Milestone 0 governance assertions
 	test -f .cursor/agents/platform-product-builder.md; \
 	test -f .cursor/agents/aws-foundations-builder.md; \
 	test -f .cursor/agents/gitops-golden-path-builder.md; \
+	test -f .cursor/agents/observability-contract-builder.md; \
 	test -f .cursor/agents/reliability-security-reviewer.md; \
 	test -f .cursor/agents/evidence-adversarial-reviewer.md; \
 	test ! -e .cursor/agents/architecture-reasoning.md; \
@@ -204,3 +206,6 @@ terraform-validate: ## Offline fmt/init/validate for infra/aws roots (no AWS cre
 
 gitops-validate: ## Offline kustomize, Helm lint/template, kubeconform, and GitOps semantic checks (no cluster)
 	@scripts/gitops-validate.sh
+
+observability-validate: ## Offline ObservabilityContract, collector config, and Prometheus rules checks (no collector start, no cluster)
+	@scripts/observability-validate.sh

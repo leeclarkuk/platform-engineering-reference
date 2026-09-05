@@ -1,0 +1,49 @@
+# Metrics-only OpenTelemetry Collector config for workload sample.
+# Design-only. make observability-validate runs `otelcol-contrib validate`
+# and must not start the collector or open listeners.
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 127.0.0.1:4317
+      http:
+        endpoint: 127.0.0.1:4318
+
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 128
+  resource:
+    attributes:
+      - key: service.name
+        value: sample
+        action: upsert
+      - key: service.namespace
+        value: apps
+        action: upsert
+      - key: service.version
+        value: "0.1.0"
+        action: upsert
+      - key: deployment.environment.name
+        value: local-design
+        action: upsert
+  batch: {}
+  not_a_real_processor:
+    bogus: true
+
+exporters:
+  prometheus:
+    endpoint: 127.0.0.1:8889
+  debug:
+    verbosity: basic
+
+service:
+  telemetry:
+    metrics:
+      level: none
+  pipelines:
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, batch, not_a_real_processor]
+      exporters: [prometheus, debug]

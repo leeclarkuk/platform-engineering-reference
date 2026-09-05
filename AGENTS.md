@@ -10,7 +10,9 @@ schema and a local `platform` CLI. Milestone 2 adds AWS foundations Terraform
 under `infra/aws/`, validated locally without cloud credentials. Milestone 3
 adds GitOps bootstrap under `gitops/`, validated locally without a cluster.
 Milestone 4 adds one Helm Application under `gitops/apps/`, validated locally
-without a cluster. Nothing is live-proved. Do not claim production-ready status.
+without a cluster. Milestone 5 adds a versioned ObservabilityContract under
+`observability/`, validated locally without starting a collector or Prometheus.
+Nothing is live-proved. Do not claim production-ready status.
 
 Immutable closed refs (do not rewrite that evidence):
 
@@ -18,6 +20,7 @@ Immutable closed refs (do not rewrite that evidence):
 * Milestone 1: `eabe8872` / `240d6a6`
 * Milestone 2: `21c9edba` / `3743fc27`
 * Milestone 3: `1cbcb4d5` / `cb108a2d`
+* Milestone 4: `c23855ef` / `5fbd80af` (reviewed head `c23855ef8da2771d021c827403d172d1cdccbefa`; post-merge Platform gates run `33903510956`)
 
 ## Integration owner
 
@@ -29,8 +32,9 @@ open extra pull requests.
 The implementation builder writes only after a Lee-approved spec. The
 Milestone 0 single-PR rule is closed (PR #1 merged). Milestone 1 is closed
 on `main` (PR #3). Milestone 2 is closed on `main` (PR #4). Milestone 3 is
-closed on `main` (PR #5). Milestone 4 is this one new pull request. Do not
-open a second PR for this layer. Do not merge without Lee.
+closed on `main` (PR #5). Milestone 4 is closed on `main` (PR #6). Milestone
+5 is this one new pull request. Do not open a second PR for this layer. Do
+not merge without Lee.
 
 `platform-product-builder` owns the authorised Milestone 1
 implementation paths listed in the team table. It does **not** own
@@ -58,41 +62,42 @@ fallback as the operating mode.
 | --- | --- | --- | --- |
 | `specification-architect` | Spec-first architecture gate before implementation | Read-only | none |
 | `platform-product-builder` | Claims, README, gap assessment, and authorised M1 implementation | Write | `api/`, `cmd/`, `internal/`, `templates/`, `testdata/`, `go.mod`, `go.sum`, `README.md`, `docs/product/` (not `AGENTS.md`, `.cursor/agents/`, `Makefile`, or `.github/workflows/`) |
-| `aws-foundations-builder` | AWS foundations (Milestone 2, closed) | Write | `infra/aws/` only |
-| `gitops-golden-path-builder` | GitOps bootstrap and M4 workload Application | Write | `gitops/` only |
+| `aws-foundations-builder` | AWS foundations (Milestone 2, closed; dormant) | Write | `infra/aws/` only |
+| `gitops-golden-path-builder` | GitOps bootstrap and M4 workload Application (closed; dormant) | Write | `gitops/` only |
+| `observability-contract-builder` | Offline ObservabilityContract (Milestone 5) | Write | `observability/` only |
 | `reliability-security-reviewer` | Process-isolated review of ignore rules, pin, CI, secrets | Read-only | none |
 | `evidence-adversarial-reviewer` | Falsify claims without the other reviewer's verdict | Read-only | none |
 
 Definitions live in `.cursor/agents/`. Azure/GCP specialist work and
 Graphite are out of scope. Helm files under `templates/` in Milestone 1 are
 a chart skeleton on disk. Milestone 4 consumes that chart unchanged as the
-source path of Application `sample`. Do not start Milestone 5.
+source path of Application `sample`. Do not start Milestone 6.
 
 ## Workflow
 
 1. `/goal` is spec-first. Invoke `specification-architect` before adding
    or changing ADRs, ownership, or milestone scope. Do not implement first.
 2. Lee approval is required before implementation.
-3. After approval, Milestone 4 is this one new pull request. Do not open
+3. After approval, Milestone 5 is this one new pull request. Do not open
    a second PR. Do not retarget, rebase onto a new branch, or merge unless
    the user says so.
 4. Bounded `/swarm` may fan out specialists inside path ownership. Swarm
    members must refuse forbidden paths. The AWS foundations builder remains
    limited to `infra/aws/` and must not modify Terraform in this
-   milestone. The GitOps builder is active for Milestone 4 and writes only
-   under `gitops/`.
+   milestone. The GitOps builder is dormant and must not modify `gitops/`.
+   The observability builder writes only under `observability/`.
 5. `/loop` is verification-only. If a check fails, make the smallest
    correction and rerun. Stop after three unsuccessful attempts.
 
-## Write boundaries (Milestone 4)
+## Write boundaries (Milestone 5)
 
 Allowed: `README.md`, `AGENTS.md`, `Makefile`, `.gitignore`,
 `.github/workflows/`, `.github/dependabot.yml`, `.cursor/agents/`,
-`docs/adr/`, `docs/product/`, `.friction/`, `scripts/`, `api/`, `cmd/`,
-`internal/`, `templates/`, `testdata/`, `go.mod`, `go.sum`, `infra/aws/`,
-`gitops/`. Do not change `LICENSE`. Do not stage secret files in the
+`docs/adr/`, `docs/product/`, `.friction/`, `scripts/`, `testdata/`,
+`observability/`. Do not change `LICENSE`. Do not stage secret files in the
 repository. Do not modify `infra/aws` Terraform, `api/`, `cmd/`,
-`templates/`, or WorkloadContract behaviour in this pull request.
+`internal/`, `templates/`, `gitops/`, or WorkloadContract behaviour in this
+pull request.
 
 Forbidden: `infra/` except existing `infra/aws/` (do not edit those
 roots here), `terraform/`, `landing-zones/`, `kubernetes/` (except Helm
@@ -103,13 +108,15 @@ Terraform/OpenTofu apply or destroy; `kubectl apply`; Helm
 install/upgrade; Argo CD mutation; AWS API; empty directories with no
 file; overlapping Terraform and GitOps objects; Graphite; `frictionctl run`
 / journey proof; a second workload Application under `gitops/apps/`;
-editing the Helm chart unless a render defect is proved (stop and escalate).
+editing the Helm chart unless a render defect is proved (stop and escalate);
+Kubernetes monitoring CRDs under `observability/`; starting a collector or
+Prometheus in a gate; speculative SLOs; paging.
 
 `recover/*` is archive only.
 
 The AWS foundations builder must refuse writes outside `infra/aws/`.
-The GitOps builder is active for Milestone 4 and must refuse writes
-outside `gitops/`.
+The GitOps builder is dormant and must refuse writes outside `gitops/`.
+The observability builder must refuse writes outside `observability/`.
 
 ## Review gates
 
@@ -135,6 +142,17 @@ outside `gitops/`.
   use the network. Validation does not. AWS credentials and kubeconfig
   unset. No gate may contact a cluster, Argo CD API, AWS API, Terraform
   backend, remote schema service, or chart repository.
+* `make observability-validate` (fail closed if committed schema or pins
+  are missing or hash-mismatched; JSON Schema validate
+  `observability/contracts/sample.yaml`; field-level identity cross-check
+  against the WorkloadContract fixture, Helm Chart/values, and Application
+  `sample`; pinned `otelcol-contrib validate` without starting the
+  collector or opening listeners; pinned `promtool check rules`; named
+  fixtures under `testdata/observability-m5-negatives/`). Tool
+  installation may use the network. Validation does not. AWS credentials
+  and kubeconfig unset. No gate may start a collector or Prometheus,
+  scrape, remote-write, or contact a cluster, Argo CD, AWS, or a remote
+  schema service.
 * Secret scan in CI. Executable files under `.github/workflows/`,
   `Makefile`, and `scripts/` must not contain runnable Terraform/OpenTofu
   apply or destroy, `kubectl apply`, or Helm install/upgrade.
@@ -186,5 +204,6 @@ INTEGRATION NOTES
 Dirty unrelated files; urge to copy archive trees; recreating `3522e48`;
 cloud credentials required; overlapping Terraform/GitOps in the PR;
 opening a second pull request; AWS foundations builder writing outside
-`infra/aws/`; GitOps builder writing outside `gitops/`; three
-consecutive failed verification loops.
+`infra/aws/`; GitOps builder writing outside `gitops/`; observability
+builder writing outside `observability/`; three consecutive failed
+verification loops; starting Milestone 6.
