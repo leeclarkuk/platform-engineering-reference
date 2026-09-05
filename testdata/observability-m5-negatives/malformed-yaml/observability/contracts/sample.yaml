@@ -1,0 +1,4 @@
+apiVersion: platform.engineering.reference/v1alpha1
+kind: ObservabilityContract
+metadata: [
+  this is not: [valid yaml

@@ -21,8 +21,8 @@ gates that need no cloud credentials:
 
 * what is designed versus what has been run locally
 * ownership law for Terraform versus Argo CD (no overlapping objects)
-* agent operating model (Grok-only, process-isolated review; M0-M3 closed;
-  M4 is one new PR)
+* agent operating model (Grok-only, process-isolated review; M0-M4 closed;
+  M5 is one new PR)
 * `make help` and `make doctor`
 * `make platform-test` (Go tests plus CLI positive/negative checks)
 * `platform doctor`, `platform validate`, and `platform create` (local CLI)
@@ -34,14 +34,17 @@ gates that need no cloud credentials:
 * `make gitops-validate` for `gitops/` (kustomize render, Helm lint and
   template, kubeconform with committed local schemas, field-level
   semantic checks including twenty named Milestone 4 negatives)
+* `make observability-validate` for `observability/` (ObservabilityContract
+  schema, collector `validate`, `promtool check rules`, named Milestone 5
+  negatives; no collector start)
 * CI denylist so Terraform state and keys cannot be tracked unnoticed by CI
 * a recorded pin for `frictionctl` module tag `v0.1.0` with Go module sums
   verified (`frictionctl version` is exactly `0.1.0`; journeys are **not**
   proved)
 
 That is all. No live cluster, no applied account, no synced Argo CD app,
-no live workload path, no live traffic. Milestone 4 is offline syntax
-only.
+no live workload path, no live traffic, no telemetry emitted or collected.
+Milestone 5 is offline syntax and config validation only.
 
 ## What runs locally
 
@@ -51,6 +54,7 @@ make check-prohibited
 make platform-test
 make terraform-validate
 make gitops-validate
+make observability-validate
 make friction-pin-verify
 ```
 
@@ -65,13 +69,18 @@ credential environment variables unset. It does not call AWS.
 over the network, then validates only from committed files. It does not
 apply, does not call kubectl, does not helm install, and does not talk to
 a cluster.
+`make observability-validate` may install pinned otelcol-contrib and
+promtool over the network, then validates only from committed files. It
+runs `otelcol-contrib validate` and `promtool check rules`. It does not
+start the collector, does not start Prometheus, and does not scrape.
 `make friction-pin-verify` uses `go mod download -json` (not a sumdb curl)
 and does not run journeys.
 
 CI on pull requests runs those gates, `make platform-test`, a negative
 doctor case, the prohibited-path stdin0 suite, targeted operating-model
-assertions, `make terraform-validate`, `make gitops-validate`, and a
-Gitleaks scan. CI does not apply Terraform and does not apply GitOps.
+assertions, `make terraform-validate`, `make gitops-validate`,
+`make observability-validate`, and a Gitleaks scan. CI does not apply
+Terraform and does not apply GitOps.
 
 ## What costs money
 
@@ -84,7 +93,7 @@ on purpose in a later, authorised step.
 | Item | Status |
 | --- | --- |
 | Product claims and gap assessment | Written; locally readable |
-| ADRs for source of truth, ownership, AWS-first, Helm-only golden path, exclusions, frictionctl pin, agent operating model, platform contract and CLI, AWS foundations roots, GitOps bootstrap, GitOps workload Application | Written (0001-0005 remain Accepted; 0011 is this milestone) |
+| ADRs for source of truth, ownership, AWS-first, Helm-only golden path, exclusions, frictionctl pin, agent operating model, platform contract and CLI, AWS foundations roots, GitOps bootstrap, GitOps workload Application, offline observability contract | Written (0001-0005 remain Accepted; 0012 is this milestone) |
 | `make help` / `make doctor` | Locally proved |
 | `platform doctor` / `platform validate` / `platform create` | Locally proved when those commands are run |
 | WorkloadContract schema and fixtures | Locally proved by `go test` and `platform validate` |
@@ -92,6 +101,7 @@ on purpose in a later, authorised step.
 | `infra/aws` Terraform roots | Locally proved by `make terraform-validate`; not live proved |
 | GitOps bootstrap under `gitops/` | Locally proved by `make gitops-validate`; not live proved |
 | GitOps Application `sample` | Locally proved by `make gitops-validate` (Helm lint/template, kubeconform, twenty named negatives); not live proved |
+| ObservabilityContract for `sample` | Locally proved by `make observability-validate` (schema, collector validate, promtool check rules, named negatives); design only; not live proved |
 | Tracked-file denylist in CI | Locally runnable; CI-asserted |
 | Secret scan in CI | Designed to run on GitHub; not a live-cloud proof |
 | frictionctl v0.1.0 pin + module-sum verify | Recorded and verifiable; journeys not proved |
@@ -111,6 +121,7 @@ See [docs/product/claims-matrix.md](docs/product/claims-matrix.md).
 * Any deploy/apply/destroy Make target
 * Auto-sync on Application `gitops-root` or Application `sample`
 * A second platform workload Application under `gitops/apps/`
+* Live scrape, collector start, or Prometheus server in a gate
 
 Archive branches `recover/aws-vertical-slice-2026-08-18` and
 `recover/aws-ci-fixes-2026-08-18` are **archive only**. They are not a
@@ -126,6 +137,7 @@ go run ./cmd/platform doctor
 go run ./cmd/platform validate testdata/workloadcontract-valid.yaml
 make platform-test
 make gitops-validate
+make observability-validate
 ```
 
 ## Licence

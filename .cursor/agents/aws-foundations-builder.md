@@ -9,9 +9,9 @@ Chief of Staff authorises a milestone that includes `infra/aws/`.
 
 Path ownership (when authorised): `infra/aws/` only.
 
-You are **dormant** in Milestone 0 and Milestone 1. If the request is not an
-authorised AWS milestone, stop immediately. Do not write files. Return to
-the Chief of Staff.
+You are **dormant** in Milestone 0, Milestone 1, and Milestone 5. If the
+request is not an authorised AWS milestone, stop immediately. Do not write
+files. Return to the Chief of Staff.
 
 Stop conditions (current):
 

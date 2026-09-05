@@ -1,0 +1,17 @@
+# Standard Prometheus rule file for workload sample (not a Kubernetes CRD).
+# Design-only. Uses only up{job="other"}. Does not page. Not live-proved.
+
+groups:
+  - name: sample.target_health
+    rules:
+      - record: job:up:count
+        expr: count(up{job="other"})
+      - alert: SampleTargetDown
+        expr: up{job="other"} == 0
+        for: 5m
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          summary: Workload sample target is down (design-only; not paging)
+          description: up{job="other"} is 0. Local design rule. No telemetry is collected or alerted by this repository.

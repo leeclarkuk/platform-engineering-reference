@@ -1,0 +1,182 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/leeclarkuk/platform-engineering-reference/observability/schemas/observabilitycontract.schema.json",
+  "title": "ObservabilityContract",
+  "description": "Offline metrics-only observability contract for a golden-path workload. Not a Kubernetes CRD. Not a live scrape, store, query, or alert proof. Logs, traces, SLOs, cloud exporters, remote write, secrets, and AWS endpoints are forbidden.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "properties": {
+    "apiVersion": {
+      "type": "string",
+      "const": "platform.engineering.reference/v1alpha1"
+    },
+    "kind": {
+      "type": "string",
+      "const": "ObservabilityContract"
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 63,
+          "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+          "description": "RFC 1123 DNS label; must equal the WorkloadContract metadata.name"
+        }
+      }
+    },
+    "spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contractVersion",
+        "owner",
+        "workloadRef",
+        "openTelemetry",
+        "prometheus",
+        "alerts",
+        "artifacts"
+      ],
+      "properties": {
+        "contractVersion": {
+          "type": "string",
+          "const": "0.1.0"
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "workloadRef": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "namespace"],
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 63,
+              "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+              "description": "RFC 1123 DNS label; must equal WorkloadContract metadata.name"
+            },
+            "namespace": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 63,
+              "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+              "description": "RFC 1123 DNS label; must equal WorkloadContract spec.serviceAccount.namespace"
+            }
+          }
+        },
+        "openTelemetry": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["resourceAttributes"],
+          "properties": {
+            "resourceAttributes": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "service.name",
+                "service.namespace",
+                "service.version",
+                "deployment.environment.name"
+              ],
+              "properties": {
+                "service.name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "service.namespace": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "service.version": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "deployment.environment.name": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          }
+        },
+        "prometheus": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["job", "metrics"],
+          "properties": {
+            "job": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 63,
+              "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+              "description": "Prometheus scrape job label for this workload, not a new workload identity"
+            },
+            "metrics": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["name", "labels"],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "labels": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "alerts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["maxSeverity", "owner"],
+          "properties": {
+            "maxSeverity": {
+              "type": "string",
+              "const": "warning",
+              "description": "Paging and critical severities are forbidden"
+            },
+            "owner": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "artifacts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["collectorConfig", "prometheusRules"],
+          "properties": {
+            "collectorConfig": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^observability/otel/.+\\.ya?ml$"
+            },
+            "prometheusRules": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^observability/prometheus/rules/.+\\.ya?ml$"
+            }
+          }
+        }
+      }
+    }
+  }
+}

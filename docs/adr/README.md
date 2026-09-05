@@ -18,6 +18,8 @@ Status is `proposed`, `accepted`, `superseded` or `rejected`.
 | [0007](0007-agent-operating-model.md) | Agent operating model | Accepted |
 | [0008](0008-platform-contract-and-cli.md) | Platform contract and CLI | Accepted |
 | [0009](0009-aws-foundations-integration-boundaries.md) | AWS foundations roots and Pod Identity status | Accepted |
+| [0010](0010-gitops-bootstrap-offline-validation.md) | GitOps bootstrap projects, root application, and offline validation | Accepted |
 | [0011](0011-gitops-workload-application-offline-helm.md) | GitOps workload Application sample and offline Helm gate | Accepted |
+| [0012](0012-offline-observability-contract.md) | Offline observability contract for workload sample | Accepted |
 
 New ADRs take the next number. Do not rewrite history. Supersede instead.

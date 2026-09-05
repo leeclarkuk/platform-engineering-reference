@@ -1,6 +1,8 @@
-# Platform gates (M0, M1, Milestone 2 Terraform validate, Milestone 3-4 GitOps validate).
+# Platform gates (M0, M1, Milestone 2 Terraform validate, Milestone 3-4 GitOps
+# validate, Milestone 5 observability validate).
 # No Terraform apply. No kubectl apply. No Helm install. No cloud mutation.
-# terraform init still downloads providers. gitops-validate tool install may use the network.
+# terraform init still downloads providers. gitops-validate and
+# observability-validate tool install may use the network.
 name: Platform gates
 
 on:
@@ -133,6 +135,13 @@ jobs:
           env -u AWS_ACCESS_KEY_ID -u AWS_SECRET_ACCESS_KEY -u AWS_SESSION_TOKEN -u AWS_PROFILE \
             -u KUBECONFIG \
             make gitops-validate
+
+      - name: Milestone 5 offline observability validate
+        run: |
+          set -euo pipefail
+          env -u AWS_ACCESS_KEY_ID -u AWS_SECRET_ACCESS_KEY -u AWS_SESSION_TOKEN -u AWS_PROFILE \
+            -u KUBECONFIG \
+            make observability-validate
 
       - name: Executable cloud-mutation check
         run: make check-no-cloud-mutation
