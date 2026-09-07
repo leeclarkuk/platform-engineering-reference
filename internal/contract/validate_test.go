@@ -1,7 +1,6 @@
 package contract
 
 import (
-	"bytes"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -256,7 +255,7 @@ func TestCreateHelmSkeletonMatchesRepo(t *testing.T) {
 		if err != nil {
 			t.Fatalf("read repo %s: %v", wantPath, err)
 		}
-		if !bytes.Equal(got, want) {
+		if string(got) != string(want) {
 			t.Errorf("Helm skeleton drift in %s\ngenerated (%d bytes):\n%s\nrepo (%d bytes):\n%s", rel, len(got), got, len(want), want)
 		}
 	}
