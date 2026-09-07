@@ -16,13 +16,12 @@ It is not a restore of an older AWS slice.
 
 ## What this proves
 
-On a clean checkout of this branch you can read the claims and run local
+On a clean checkout of `main` you can read the claims and run local
 gates that need no cloud credentials:
 
 * what is designed versus what has been run locally
 * ownership law for Terraform versus Argo CD (no overlapping objects)
-* agent operating model (Grok-only, process-isolated review; M0-M4 closed;
-  M5 is one new PR)
+* agent operating model (Grok-only, process-isolated review; M0-M5 closed)
 * `make help` and `make doctor`
 * `make platform-test` (Go tests plus CLI positive/negative checks)
 * `platform doctor`, `platform validate`, and `platform create` (local CLI)
@@ -93,7 +92,7 @@ on purpose in a later, authorised step.
 | Item | Status |
 | --- | --- |
 | Product claims and gap assessment | Written; locally readable |
-| ADRs for source of truth, ownership, AWS-first, Helm-only golden path, exclusions, frictionctl pin, agent operating model, platform contract and CLI, AWS foundations roots, GitOps bootstrap, GitOps workload Application, offline observability contract | Written (0001-0005 remain Accepted; 0012 is this milestone) |
+| ADRs for source of truth, ownership, AWS-first, Helm-only golden path, exclusions, frictionctl pin, agent operating model, platform contract and CLI, AWS foundations roots, GitOps bootstrap, GitOps workload Application, offline observability contract | Written (0001-0005 remain Accepted; 0012 is Accepted on `main`) |
 | `make help` / `make doctor` | Locally proved |
 | `platform doctor` / `platform validate` / `platform create` | Locally proved when those commands are run |
 | WorkloadContract schema and fixtures | Locally proved by `go test` and `platform validate` |
@@ -105,8 +104,8 @@ on purpose in a later, authorised step.
 | Tracked-file denylist in CI | Locally runnable; CI-asserted |
 | Secret scan in CI | Designed to run on GitHub; not a live-cloud proof |
 | frictionctl v0.1.0 pin + module-sum verify | Recorded and verifiable; journeys not proved |
-| Live AWS apply, synced Argo CD, sample workload traffic | Not proved; not in this milestone |
-| Azure/GCP parity | Not proved; not in this milestone |
+| Live AWS apply, synced Argo CD, sample workload traffic | Not proved; not started |
+| Azure/GCP parity | Not proved; not started |
 
 See [docs/product/claims-matrix.md](docs/product/claims-matrix.md).
 

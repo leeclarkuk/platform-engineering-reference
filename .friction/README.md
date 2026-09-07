@@ -15,7 +15,6 @@ not proof. Fail closed if the toolchain cannot verify.
 
 There are **no** journeys or budgets in this repository yet.
 `journeys_proved` is false. Do not run `frictionctl` as a merge gate until
-a golden path exists and a baseline is captured. Do not run journeys in
-Milestone 0.
+a golden path exists and a baseline is captured.
 
 Do not modify the `frictionctl` repository from this project.

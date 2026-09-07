@@ -21,6 +21,7 @@ Immutable closed refs (do not rewrite that evidence):
 * Milestone 2: `21c9edba` / `3743fc27`
 * Milestone 3: `1cbcb4d5` / `cb108a2d`
 * Milestone 4: `c23855ef` / `5fbd80af` (reviewed head `c23855ef8da2771d021c827403d172d1cdccbefa`; post-merge Platform gates run `33903510956`)
+* Milestone 5: `dc15f8f9` / `a2bd23cb` (reviewed head `dc15f8f9d34c4b2837e9364350f4668b9715ce03`; merge `a2bd23cb947fe45fba2f94d2f873b28917aaa0a0`)
 
 ## Integration owner
 
@@ -33,8 +34,8 @@ The implementation builder writes only after a Lee-approved spec. The
 Milestone 0 single-PR rule is closed (PR #1 merged). Milestone 1 is closed
 on `main` (PR #3). Milestone 2 is closed on `main` (PR #4). Milestone 3 is
 closed on `main` (PR #5). Milestone 4 is closed on `main` (PR #6). Milestone
-5 is this one new pull request. Do not open a second PR for this layer. Do
-not merge without Lee.
+5 is closed on `main` (PR #7). Do not start Milestone 6. Do not merge
+without Lee.
 
 `platform-product-builder` owns the authorised Milestone 1
 implementation paths listed in the team table. It does **not** own
@@ -64,7 +65,7 @@ fallback as the operating mode.
 | `platform-product-builder` | Claims, README, gap assessment, and authorised M1 implementation | Write | `api/`, `cmd/`, `internal/`, `templates/`, `testdata/`, `go.mod`, `go.sum`, `README.md`, `docs/product/` (not `AGENTS.md`, `.cursor/agents/`, `Makefile`, or `.github/workflows/`) |
 | `aws-foundations-builder` | AWS foundations (Milestone 2, closed; dormant) | Write | `infra/aws/` only |
 | `gitops-golden-path-builder` | GitOps bootstrap and M4 workload Application (closed; dormant) | Write | `gitops/` only |
-| `observability-contract-builder` | Offline ObservabilityContract (Milestone 5) | Write | `observability/` only |
+| `observability-contract-builder` | Offline ObservabilityContract (Milestone 5, closed; dormant) | Write | `observability/` only |
 | `reliability-security-reviewer` | Process-isolated review of ignore rules, pin, CI, secrets | Read-only | none |
 | `evidence-adversarial-reviewer` | Falsify claims without the other reviewer's verdict | Read-only | none |
 
@@ -78,31 +79,28 @@ source path of Application `sample`. Do not start Milestone 6.
 1. `/goal` is spec-first. Invoke `specification-architect` before adding
    or changing ADRs, ownership, or milestone scope. Do not implement first.
 2. Lee approval is required before implementation.
-3. After approval, Milestone 5 is this one new pull request. Do not open
-   a second PR. Do not retarget, rebase onto a new branch, or merge unless
-   the user says so.
+3. After approval, one pull request per authorised layer. Do not open a
+   second PR for the same layer. Do not retarget, rebase onto a new
+   branch, or merge unless the user says so.
 4. Bounded `/swarm` may fan out specialists inside path ownership. Swarm
-   members must refuse forbidden paths. The AWS foundations builder remains
-   limited to `infra/aws/` and must not modify Terraform in this
-   milestone. The GitOps builder is dormant and must not modify `gitops/`.
-   The observability builder writes only under `observability/`.
+   members must refuse forbidden paths. The AWS foundations builder is
+   dormant and must refuse writes outside `infra/aws/`. The GitOps
+   builder is dormant and must refuse writes outside `gitops/`. The
+   observability builder is dormant and must refuse writes outside
+   `observability/`.
 5. `/loop` is verification-only. If a check fails, make the smallest
    correction and rerun. Stop after three unsuccessful attempts.
 
-## Write boundaries (Milestone 5)
+## Write boundaries (closed M0-M5)
 
-Allowed: `README.md`, `AGENTS.md`, `Makefile`, `.gitignore`,
-`.github/workflows/`, `.github/dependabot.yml`, `.cursor/agents/`,
-`docs/adr/`, `docs/product/`, `.friction/`, `scripts/`, `testdata/`,
-`observability/`. Do not change `LICENSE`. Do not stage secret files in the
-repository. Do not modify `infra/aws` Terraform, `api/`, `cmd/`,
-`internal/`, `templates/`, `gitops/`, or WorkloadContract behaviour in this
-pull request.
+Do not change `LICENSE`. Do not stage secret files in the repository.
+Do not start Milestone 6.
 
 Forbidden: `infra/` except existing `infra/aws/` (do not edit those
-roots here), `terraform/`, `landing-zones/`, `kubernetes/` (except Helm
-files under `templates/`), `examples/`, `developer-platform/` copied from
-archive; checkout/cherry-pick/copy of `81cac81` or `23c7744`; recreating
+roots unless a newly authorised AWS milestone says so), `terraform/`,
+`landing-zones/`, `kubernetes/` (except Helm files under `templates/`),
+`examples/`, `developer-platform/` copied from archive;
+checkout/cherry-pick/copy of `81cac81` or `23c7744`; recreating
 `3522e48`; Azure/GCP modules; Backstage; Crossplane; mesh; AI; runnable
 Terraform/OpenTofu apply or destroy; `kubectl apply`; Helm
 install/upgrade; Argo CD mutation; AWS API; empty directories with no
@@ -114,9 +112,10 @@ Prometheus in a gate; speculative SLOs; paging.
 
 `recover/*` is archive only.
 
-The AWS foundations builder must refuse writes outside `infra/aws/`.
-The GitOps builder is dormant and must refuse writes outside `gitops/`.
-The observability builder must refuse writes outside `observability/`.
+The AWS foundations builder is dormant and must refuse writes outside
+`infra/aws/`. The GitOps builder is dormant and must refuse writes
+outside `gitops/`. The observability builder is dormant and must refuse
+writes outside `observability/`.
 
 ## Review gates
 
@@ -203,7 +202,8 @@ INTEGRATION NOTES
 
 Dirty unrelated files; urge to copy archive trees; recreating `3522e48`;
 cloud credentials required; overlapping Terraform/GitOps in the PR;
-opening a second pull request; AWS foundations builder writing outside
-`infra/aws/`; GitOps builder writing outside `gitops/`; observability
-builder writing outside `observability/`; three consecutive failed
-verification loops; starting Milestone 6.
+opening a second pull request for the same authorised layer; AWS
+foundations builder writing outside `infra/aws/`; GitOps builder writing
+outside `gitops/`; observability builder writing outside
+`observability/`; three consecutive failed verification loops; starting
+Milestone 6.

@@ -21,7 +21,7 @@ Protect:
 - no Backstage, Crossplane, service mesh, or AI control plane;
 - Grok-only implementation after Lee authorisation; review is process-isolated;
 - claims must separate designed, locally proved, and live proved;
-- existing approved work stays on the existing pull request; no second PR.
+- existing approved work stays on one pull request per authorised layer.
 
 Return exactly:
 
@@ -34,5 +34,5 @@ Return exactly:
 
 Do not praise the design. Do not add product scope. If evidence is missing, say so.
 
-Stop if asked to copy archive trees, to authorise live apply in Milestone 0, or
-to open a second pull request.
+Stop if asked to copy archive trees, to authorise live apply, or
+to open a second pull request for the same authorised layer.

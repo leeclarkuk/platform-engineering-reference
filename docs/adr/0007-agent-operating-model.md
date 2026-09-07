@@ -35,7 +35,7 @@ Accepted because Lee approved this specification.
 * Review debt: recheck with Opus when that reviewer is available.
 * Chief of Staff is the sole coordinator. There is no second Chief of
   Staff. `platform-product-builder` does not own `AGENTS.md`.
-* The living roster is: `specification-architect` (read-only),
+* The Milestone 0 roster is: `specification-architect` (read-only),
   `platform-product-builder`, `aws-foundations-builder` (dormant in M0),
   `gitops-golden-path-builder` (dormant in M0),
   `reliability-security-reviewer` (read-only),
