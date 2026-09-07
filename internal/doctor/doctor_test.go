@@ -7,9 +7,16 @@ import (
 	"testing"
 )
 
+var awsCredentialEnvVars = []string{
+	"AWS_ACCESS_KEY_ID",
+	"AWS_SECRET_ACCESS_KEY",
+	"AWS_SESSION_TOKEN",
+	"AWS_PROFILE",
+}
+
 func unsetAWSEnv(t *testing.T) {
 	t.Helper()
-	for _, k := range AWSCredentialEnvVars {
+	for _, k := range awsCredentialEnvVars {
 		orig, had := os.LookupEnv(k)
 		if err := os.Unsetenv(k); err != nil {
 			t.Fatal(err)

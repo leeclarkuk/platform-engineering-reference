@@ -1,7 +1,6 @@
 package contract
 
 import (
-	"bytes"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -36,6 +35,21 @@ func TestValidateRejectsGoldenPathKustomize(t *testing.T) {
 	path := testdata(t, "workloadcontract-invalid-goldenpath-kustomize.yaml")
 	if err := File(path); err == nil {
 		t.Fatal("expected goldenPath kustomize to fail validation")
+	}
+}
+
+func TestValidateRejectsEmptyDocument(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "empty.yaml")
+	if err := os.WriteFile(path, []byte(""), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	err := File(path)
+	if err == nil {
+		t.Fatal("expected empty document to fail validation")
+	}
+	if !strings.Contains(err.Error(), "empty document") {
+		t.Fatalf("empty document error=%v", err)
 	}
 }
 
@@ -241,7 +255,7 @@ func TestCreateHelmSkeletonMatchesRepo(t *testing.T) {
 		if err != nil {
 			t.Fatalf("read repo %s: %v", wantPath, err)
 		}
-		if !bytes.Equal(got, want) {
+		if string(got) != string(want) {
 			t.Errorf("Helm skeleton drift in %s\ngenerated (%d bytes):\n%s\nrepo (%d bytes):\n%s", rel, len(got), got, len(want), want)
 		}
 	}
