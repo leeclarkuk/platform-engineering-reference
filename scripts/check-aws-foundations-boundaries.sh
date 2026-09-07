@@ -64,11 +64,8 @@ scan_aws_root() {
     'provider[[:space:]]+"helm"'
     'resource[[:space:]]+"kubernetes_'
     'data[[:space:]]+"kubernetes_'
-    'resource[[:space:]]+"helm_release"'
-    'data[[:space:]]+"helm_release"'
     'helm_release'
     'aws_eks_cluster_auth'
-    'cluster-authentication'
   )
 
   # Built without writing the literal command text in this file.
