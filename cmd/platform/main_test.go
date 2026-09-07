@@ -17,3 +17,20 @@ func TestDoctorCommandSourceDoesNotReadAWSEnv(t *testing.T) {
 		}
 	}
 }
+
+func TestCreateHelpExitsZero(t *testing.T) {
+	if got := runCreate([]string{"-h"}); got != 0 {
+		t.Fatalf("create -h exit=%d, want 0", got)
+	}
+}
+
+func TestCreateRejectsUnexpectedArgs(t *testing.T) {
+	if got := runCreate([]string{
+		"--name", "widget",
+		"--owner", "platform",
+		"--namespace", "apps",
+		"somedir",
+	}); got != 2 {
+		t.Fatalf("positional DIR exit=%d, want 2", got)
+	}
+}

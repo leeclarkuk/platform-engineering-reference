@@ -86,23 +86,18 @@ func runCreate(args []string) int {
 	namespace := fs.String("namespace", "", "RFC 1123 DNS label (ServiceAccount namespace; ADR-0002)")
 	outDir := fs.String("out-dir", "", "output directory (must not already exist)")
 	if err := fs.Parse(args); err != nil {
+		if err == flag.ErrHelp {
+			return 0
+		}
+		return 2
+	}
+	if fs.NArg() > 0 {
+		fmt.Fprintln(os.Stderr, "create: unexpected arguments; use --out-dir DIR")
 		return 2
 	}
 	dir := *outDir
-	switch fs.NArg() {
-	case 0:
-		if dir == "" {
-			dir = strings.TrimSpace(*name)
-		}
-	case 1:
-		if dir != "" {
-			fmt.Fprintln(os.Stderr, "create: pass DIR as --out-dir or as a positional argument, not both")
-			return 2
-		}
-		dir = fs.Arg(0)
-	default:
-		fmt.Fprintln(os.Stderr, "usage: platform create --name NAME --owner OWNER --namespace NAMESPACE [--out-dir DIR]")
-		return 2
+	if dir == "" {
+		dir = strings.TrimSpace(*name)
 	}
 	path, err := contract.Create(contract.CreateOptions{
 		Name:      *name,
