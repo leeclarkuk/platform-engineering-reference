@@ -20,8 +20,9 @@ Rules:
 - Separate designed, locally proved, and live proved.
 - `recover/*` are archive refs, not a backlog to copy.
 - `3522e48` is a missing-commit blocker, not a present artefact.
-- Shortest demo remains `make help && make doctor` until a later milestone
-  adds a real golden path.
+- Shortest demo matches README (`make help && make doctor`, local
+  `platform` commands, `make platform-test`, `make gitops-validate`,
+  `make observability-validate`).
 - GOV-003 is a CI tracked-file denylist, not a gitignore-only promise.
 
 Helm chart skeleton files under `templates/` are allowed (files on disk,

@@ -5,7 +5,7 @@
 *.swp
 *~
 
-# Terraform state and local overrides (no AWS slice in M0; keep the net closed)
+# Terraform state and local overrides
 .terraform/
 *.tfstate
 *.tfstate.*
