@@ -1,5 +1,4 @@
-# Standard Prometheus rule file for workload sample (not a Kubernetes CRD).
-# Design-only. Uses only up{job="sample"}. Does not page. Not live-proved.
+# Prometheus rule file (not a Kubernetes CRD).
 
 groups:
   - name: sample.target_health
