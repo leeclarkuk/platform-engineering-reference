@@ -21,8 +21,8 @@ fails if any of these exits 0.
 | deployment-wrong-sa | Deployment not using ServiceAccount sample |
 | raw-workload-under-gitops-apps | Raw workload duplication under gitops/apps |
 | malformed-application-or-helm | Malformed Application or Helm output |
-| missing-helm-pin-or-schema | Missing Helm pin, local schema, or recorded hash |
-| stale-schema-hash | Modified vendored schema with stale hash |
+| missing-helm-pin-or-schema | Missing Helm pin (fence-only; Helm keys omitted) |
+| stale-schema-hash | Stale recorded schema hash (hash mismatch; no vendored schema tree) |
 | iam-or-terraform-under-gitops | IAM or Terraform under gitops |
 | k8s-helm-under-terraform | K8s/Helm providers/resources under Terraform |
 | live-mutation-in-validation | Live kubectl/Helm install/Argo sync/Terraform apply/AWS mutation path |
