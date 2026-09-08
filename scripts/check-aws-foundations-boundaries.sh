@@ -59,15 +59,15 @@ scan_aws_root() {
   rm -f "${roots_file}"
 
   # Kubernetes / Helm ownership (quote-tolerant spacing).
+  # Proved by testdata/aws-foundations-boundaries/{kubernetes,helm}.
+  # Untested kubernetes_ resource/data and aws_eks_cluster_auth regexes
+  # were dropped rather than given new fixture directories.
   local -a ownership_regexes=(
     'provider[[:space:]]+"kubernetes"'
     'provider[[:space:]]+"helm"'
-    'resource[[:space:]]+"kubernetes_'
-    'data[[:space:]]+"kubernetes_'
     'resource[[:space:]]+"helm_release"'
     'data[[:space:]]+"helm_release"'
     'helm_release'
-    'aws_eks_cluster_auth'
     'cluster-authentication'
   )
 
@@ -99,7 +99,9 @@ scan_aws_root() {
 assert_nonzero_scan() {
   local desc="$1"
   local path="$2"
-  local out code
+  shift 2
+  local -a needles=("$@")
+  local out code needle
   set +e
   out="$(scan_aws_root "${path}" 2>&1)"
   code=$?
@@ -109,6 +111,16 @@ assert_nonzero_scan() {
     printf 'FAIL %s: wanted non-zero, got 0\n' "${desc}" >&2
     exit 1
   fi
+  if [[ "${#needles[@]}" -eq 0 ]]; then
+    printf 'FAIL %s: needle required\n' "${desc}" >&2
+    exit 1
+  fi
+  for needle in "${needles[@]}"; do
+    printf '%s\n' "${out}" | grep -Eq "${needle}" || {
+      printf 'FAIL %s: non-zero without intended reason %s\n%s\n' "${desc}" "${needle}" "${out}" >&2
+      exit 1
+    }
+  done
   printf 'ok %s (exit %s)\n' "${desc}" "${code}"
 }
 
@@ -130,11 +142,17 @@ fi
 scan_aws_root "${real_root}"
 
 fixtures="${root}/testdata/aws-foundations-boundaries"
-assert_nonzero_scan 'fourth Terraform root' "${fixtures}/fourth-root"
-assert_nonzero_scan 'Kubernetes ownership' "${fixtures}/kubernetes"
-assert_nonzero_scan 'Helm ownership' "${fixtures}/helm"
-assert_nonzero_scan 'whitespace-tolerant apply' "${fixtures}/apply"
-assert_nonzero_scan 'whitespace-tolerant destroy' "${fixtures}/destroy"
+assert_nonzero_scan 'fourth Terraform root' "${fixtures}/fourth-root" \
+  'Terraform roots must be exactly bootstrap, network, workload'
+assert_nonzero_scan 'Kubernetes ownership' "${fixtures}/kubernetes" \
+  'provider[[:space:]]+"kubernetes"'
+assert_nonzero_scan 'Helm ownership' "${fixtures}/helm" \
+  'provider[[:space:]]+"helm"' 'helm_release' \
+  'helm[[:space:]]+install' 'helm[[:space:]]+upgrade'
+assert_nonzero_scan 'whitespace-tolerant apply' "${fixtures}/apply" \
+  'terraform[[:space:]]+apply'
+assert_nonzero_scan 'whitespace-tolerant destroy' "${fixtures}/destroy" \
+  'terraform[[:space:]]+destroy'
 
 printf 'ok: infra/aws boundary checks passed (positives and negative fixtures)\n'
 exit 0
