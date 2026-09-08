@@ -116,6 +116,7 @@ assert_nonzero_schema_check() {
   local desc="$1"
   local pins_file="$2"
   local repo_root="$3"
+  local needle="${4:-}"
   local out code
   set +e
   out="$(verify_committed_schemas "$pins_file" "$repo_root" 2>&1)"
@@ -126,12 +127,19 @@ assert_nonzero_schema_check() {
     printf 'FAIL %s: wanted non-zero, got 0\n' "$desc" >&2
     exit 1
   fi
+  if [[ -n "$needle" ]]; then
+    printf '%s\n' "$out" | grep -Eq "$needle" || {
+      printf 'FAIL %s: non-zero without intended reason %s\n%s\n' "$desc" "$needle" "$out" >&2
+      exit 1
+    }
+  fi
   printf 'ok negative %s (exit %s)\n' "$desc" "$code"
 }
 
 assert_nonzero() {
   local desc="$1"
-  shift
+  local needle="$2"
+  shift 2
   local out code
   set +e
   out="$("$@" 2>&1)"
@@ -142,7 +150,41 @@ assert_nonzero() {
     printf 'FAIL %s: wanted non-zero, got 0\n' "$desc" >&2
     exit 1
   fi
+  printf '%s\n' "$out" | grep -Eq "$needle" || {
+    printf 'FAIL %s: non-zero without intended reason %s\n%s\n' "$desc" "$needle" "$out" >&2
+    exit 1
+  }
   printf 'ok named negative %s (exit %s)\n' "$desc" "$code"
+}
+
+# Named M4 negative 19. Always require the Kubernetes provider needle (present
+# on main). Also require helm_release when the executed fixture contains that
+# token, so this gate stays honest if the named-19 helm_release line lands
+# separately. Do not treat the M2 kubernetes/helm suites as a substitute.
+assert_k8s_helm_under_terraform() {
+  local fixture="$m4_neg/k8s-helm-under-terraform"
+  local out code
+  set +e
+  out="$("$root/scripts/check-aws-foundations-boundaries.sh" "$fixture" 2>&1)"
+  code=$?
+  set -e
+  printf '%s\n' "$out"
+  if [[ "$code" -eq 0 ]]; then
+    printf 'FAIL k8s-helm-under-terraform: wanted non-zero, got 0\n' >&2
+    exit 1
+  fi
+  printf '%s\n' "$out" | grep -Eq 'provider[[:space:]]+"kubernetes"' || {
+    printf 'FAIL k8s-helm-under-terraform: non-zero without intended reason %s\n%s\n' \
+      'provider[[:space:]]+"kubernetes"' "$out" >&2
+    exit 1
+  }
+  if grep -R -q -E -- 'helm_release' "$fixture"; then
+    printf '%s\n' "$out" | grep -Eq 'helm_release' || {
+      printf 'FAIL k8s-helm-under-terraform: fixture has helm_release but failure text does not\n%s\n' "$out" >&2
+      exit 1
+    }
+  fi
+  printf 'ok named negative k8s-helm-under-terraform (exit %s)\n' "$code"
 }
 
 [[ -f "$pins" ]] || fail "missing ${pins}"
@@ -160,7 +202,9 @@ neg_root="$root/testdata/gitops-validate-negatives"
 [[ -d "$neg_root/missing-application-schema" ]] || fail "missing negative fixture testdata/gitops-validate-negatives/missing-application-schema"
 assert_nonzero_schema_check 'missing pin file' \
   "$neg_root/missing-pin-file/GITOPS_PINS.md" \
-  "$neg_root/missing-pin-file"
+  "$neg_root/missing-pin-file" \
+  'missing pin file'
+# missing-application-schema needle is owned by the separate missing-schema PR.
 assert_nonzero_schema_check 'missing individual required schema' \
   "$neg_root/missing-application-schema/GITOPS_PINS.md" \
   "$neg_root/missing-application-schema"
@@ -169,10 +213,12 @@ assert_nonzero_schema_check 'missing individual required schema' \
 [[ -d "$m4_neg/stale-schema-hash" ]] || fail "missing M4 fixture stale-schema-hash"
 assert_nonzero_schema_check 'missing Helm pin, local schema, or recorded hash' \
   "$m4_neg/missing-helm-pin-or-schema/GITOPS_PINS.md" \
-  "$m4_neg/missing-helm-pin-or-schema"
+  "$m4_neg/missing-helm-pin-or-schema" \
+  'missing Helm pin'
 assert_nonzero_schema_check 'modified vendored schema with stale hash' \
   "$m4_neg/stale-schema-hash/GITOPS_PINS.md" \
-  "$m4_neg/stale-schema-hash"
+  "$m4_neg/stale-schema-hash" \
+  'hash mismatch'
 
 kustomize_version="$(pin_get_from "$pins" kustomize_version)"
 kustomize_archive="$(pin_get_from "$pins" kustomize_archive)"
@@ -353,10 +399,9 @@ printf 'ok kubeconform helm render (Deployment, Service, ServiceAccount; local s
 "$root/scripts/check-aws-foundations-boundaries.sh"
 printf 'ok existing M2 Terraform K8s/Helm boundary check\n'
 
-assert_nonzero 'k8s-helm-under-terraform' \
-  "$root/scripts/check-aws-foundations-boundaries.sh" "$m4_neg/k8s-helm-under-terraform"
+assert_k8s_helm_under_terraform
 
-assert_nonzero 'live-mutation-in-validation' \
+assert_nonzero 'live-mutation-in-validation' 'cloud-mutation' \
   "$root/scripts/check-no-cloud-mutation.sh" "$m4_neg/live-mutation-in-validation"
 
 printf 'ok gitops-validate (local schemas only; no cluster; no apply)\n'
