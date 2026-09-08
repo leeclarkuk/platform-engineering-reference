@@ -116,6 +116,7 @@ assert_nonzero_schema_check() {
   local desc="$1"
   local pins_file="$2"
   local repo_root="$3"
+  local needle="${4:-}"
   local out code
   set +e
   out="$(verify_committed_schemas "$pins_file" "$repo_root" 2>&1)"
@@ -125,6 +126,12 @@ assert_nonzero_schema_check() {
   if [[ "$code" -eq 0 ]]; then
     printf 'FAIL %s: wanted non-zero, got 0\n' "$desc" >&2
     exit 1
+  fi
+  if [[ -n "$needle" ]]; then
+    printf '%s\n' "$out" | grep -Eq "$needle" || {
+      printf 'FAIL %s: non-zero without intended reason %s\n%s\n' "$desc" "$needle" "$out" >&2
+      exit 1
+    }
   fi
   printf 'ok negative %s (exit %s)\n' "$desc" "$code"
 }
@@ -163,7 +170,8 @@ assert_nonzero_schema_check 'missing pin file' \
   "$neg_root/missing-pin-file"
 assert_nonzero_schema_check 'missing individual required schema' \
   "$neg_root/missing-application-schema/GITOPS_PINS.md" \
-  "$neg_root/missing-application-schema"
+  "$neg_root/missing-application-schema" \
+  'missing required schema'
 
 [[ -d "$m4_neg/missing-helm-pin-or-schema" ]] || fail "missing M4 fixture missing-helm-pin-or-schema"
 [[ -d "$m4_neg/stale-schema-hash" ]] || fail "missing M4 fixture stale-schema-hash"
