@@ -35,7 +35,7 @@ kubernetes_schema_version: 1.33.4
 kubernetes_schema_source: yannh/kubernetes-json-schema
 kubernetes_schema_commit: 229f0f08ac8675814210a2981f45363438a43930
 kubernetes_namespace_schema_path: gitops/schemas/kubernetes/v1.33.4-standalone-strict/namespace-v1.json
-kubernetes_namespace_schema_sha256: 324fae677b98d1a6d54340db0c334d053e8ffbafceb3f73326e41de2610d5843
+kubernetes_namespace_schema_sha256: 0000000000000000000000000000000000000000000000000000000000000000
 kubernetes_deployment_schema_path: gitops/schemas/kubernetes/v1.33.4-standalone-strict/deployment-apps-v1.json
 kubernetes_deployment_schema_sha256: 8a4163cd36194edf94abdedff96b5bd8f612f76818a2a3767b35d1c72b8a7868
 kubernetes_service_schema_path: gitops/schemas/kubernetes/v1.33.4-standalone-strict/service-v1.json
