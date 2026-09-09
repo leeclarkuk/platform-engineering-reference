@@ -4,8 +4,16 @@ metadata:
   name: platform
   namespace: argocd
 spec:
+  description: Unprivileged platform workloads. Used only by Application sample. Destinations are namespace apps only.
   sourceRepos:
     - https://github.com/leeclarkuk/platform-engineering-reference
   destinations:
     - server: https://kubernetes.default.svc
       namespace: apps
+  namespaceResourceWhitelist:
+    - group: apps
+      kind: Deployment
+    - group: ""
+      kind: Service
+    - group: ""
+      kind: ServiceAccount
