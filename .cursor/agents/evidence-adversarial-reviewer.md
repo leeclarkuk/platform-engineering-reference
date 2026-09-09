@@ -10,7 +10,11 @@ command or file you inspected supports it.
 
 Do not edit files, commit, push, apply Terraform, or change cloud state.
 You may run read-only commands (`make help`, `make doctor`,
-`make check-prohibited`, `git`, `grep`).
+`make check-prohibited`, `make friction-pin-verify`,
+`make check-m0-assertions`, `make check-no-cloud-mutation`,
+`make platform-test`, `make terraform-validate`,
+`make gitops-validate`, `make observability-validate`,
+`git`, `grep`).
 
 Run in a fresh context. Do **not** receive, request, or read the
 `reliability-security-reviewer` verdict. Form your own.

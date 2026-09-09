@@ -22,11 +22,6 @@ help: ## Show available targets
 	@awk 'BEGIN {FS = ":.*##"; printf "\nTargets:\n"} \
 		/^[a-zA-Z0-9_.-]+:.*##/ { printf "  %-28s %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
 	@printf '%s\n' ''
-	@printf '%s\n' 'Milestone 1 adds a local platform CLI (doctor, validate, create).'
-	@printf '%s\n' 'Milestone 2 adds offline make terraform-validate for infra/aws.'
-	@printf '%s\n' 'Milestone 3 adds offline make gitops-validate for gitops/.'
-	@printf '%s\n' 'Milestone 4 adds Application sample and Helm lint/template to gitops-validate.'
-	@printf '%s\n' 'Milestone 5 adds offline make observability-validate for observability/.'
 	@printf '%s\n' 'No deploy, apply or destroy target exists.'
 	@printf '%s\n' 'Doctor does not use cloud credentials and does not call AWS.'
 	@printf '%s\n' 'friction-pin-verify does not run journeys.'
