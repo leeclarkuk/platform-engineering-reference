@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   gates:
-    name: help, doctor, pin, prohibited files, secret scan
+    name: Platform gates
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -31,7 +31,6 @@ jobs:
       # Record SHA evidence in the job log and step summary. Artifact upload
       # is not used: it required actions:write, which this workflow does not grant.
       - name: Record SHA evidence
-        id: sha_evidence
         run: |
           set -euo pipefail
           # Do not read workflow_run head_sha here. That field is not populated on pull_request. Collect workflow-run API head_sha externally for the review hand-off and compare it with the reviewed PR head.
@@ -58,10 +57,6 @@ jobs:
           if [[ -n "${reviewed_pr_head_sha}" && "${git_head}" != "${reviewed_pr_head_sha}" ]]; then
             printf 'synthetic merge SHA=%s (HEAD is the merge commit, not the PR branch head)\n' "${git_head}"
           fi
-
-          echo "resolved_main=${resolved_main_sha}" >> "$GITHUB_OUTPUT"
-          echo "starting_head=${git_head}" >> "$GITHUB_OUTPUT"
-          echo "worktree_clean=${worktree_clean}" >> "$GITHUB_OUTPUT"
 
           {
             echo "RESOLVED_MAIN: ${resolved_main_sha}"
@@ -123,20 +118,20 @@ jobs:
         with:
           terraform_version: '1.16.1'
 
-      - name: Milestone 2 offline terraform fmt/init/validate
+      - name: make terraform-validate
         run: |
           set -euo pipefail
           env -u AWS_ACCESS_KEY_ID -u AWS_SECRET_ACCESS_KEY -u AWS_SESSION_TOKEN -u AWS_PROFILE \
             make terraform-validate
 
-      - name: Milestone 3-4 offline gitops validate
+      - name: make gitops-validate
         run: |
           set -euo pipefail
           env -u AWS_ACCESS_KEY_ID -u AWS_SECRET_ACCESS_KEY -u AWS_SESSION_TOKEN -u AWS_PROFILE \
             -u KUBECONFIG \
             make gitops-validate
 
-      - name: Milestone 5 offline observability validate
+      - name: make observability-validate
         run: |
           set -euo pipefail
           env -u AWS_ACCESS_KEY_ID -u AWS_SECRET_ACCESS_KEY -u AWS_SESSION_TOKEN -u AWS_PROFILE \
