@@ -39,22 +39,25 @@ const (
 	tfVarsFile   = "infra/aws/workload/variables.tf"
 )
 
-var requiredM3Fixtures = []string{
-	"privilege-inversion",
-	"bootstrap-destination-apps",
-	"targetrevision-not-main",
-	"repourl-not-this-repo",
-	"destination-namespace-wildcard",
-	"destination-unlisted-ns",
-	"sourcerepos-wildcard",
-	"autosync-root",
-	"source-path-templates",
-	"iam-under-gitops",
-	"terraform-under-gitops",
-	"privilege-broadening",
-	"extra-namespace",
-	"wrong-metadata-namespace",
-	"malformed-yaml",
+// Fifteen Milestone 3 trees. Reason is set only where the named
+// Application defect must be the failing text, not a pre-M4
+// AppProject platform missing namespaceResourceWhitelist.
+var requiredM3Fixtures = []m3Fixture{
+	{name: "privilege-inversion"},
+	{name: "bootstrap-destination-apps"},
+	{name: "targetrevision-not-main", reason: "targetRevision"},
+	{name: "repourl-not-this-repo", reason: "repoURL"},
+	{name: "destination-namespace-wildcard"},
+	{name: "destination-unlisted-ns", reason: "kube-system"},
+	{name: "sourcerepos-wildcard"},
+	{name: "autosync-root"},
+	{name: "source-path-templates", reason: "source path"},
+	{name: "iam-under-gitops"},
+	{name: "terraform-under-gitops"},
+	{name: "privilege-broadening"},
+	{name: "extra-namespace"},
+	{name: "wrong-metadata-namespace", reason: "metadata.namespace"},
+	{name: "malformed-yaml"},
 }
 
 // Twenty named Milestone 4 behaviours. Each directory must exist and the
@@ -91,6 +94,11 @@ var requiredM4HardenFixtures = []m4HardenFixture{
 	{name: "source-plugin", kind: "tree", reason: "source.plugin"},
 	{name: "source-directory", kind: "tree", reason: "source.directory"},
 	{name: "source-kustomize", kind: "tree", reason: "source.kustomize"},
+}
+
+type m3Fixture struct {
+	name   string
+	reason string
 }
 
 type m4Fixture struct {
@@ -145,6 +153,10 @@ func main() {
 
 	fixRoot := filepath.Join(root, "testdata", "gitops-boundaries")
 	seen := map[string]bool{}
+	m3Want := map[string]string{}
+	for _, fx := range requiredM3Fixtures {
+		m3Want[fx.name] = fx.reason
+	}
 	entries, err := os.ReadDir(fixRoot)
 	if err != nil {
 		fail("read fixtures: %v", err)
@@ -159,11 +171,18 @@ func main() {
 		if err == nil {
 			fail("fixture %s: wanted non-zero, got pass", ent.Name())
 		}
+		if reason := m3Want[ent.Name()]; reason != "" {
+			if !strings.Contains(err.Error(), reason) {
+				fail("fixture %s: wanted reason containing %q, got %v", ent.Name(), reason, err)
+			}
+			fmt.Printf("ok fixture %s failed as required (%s): %v\n", ent.Name(), reason, err)
+			continue
+		}
 		fmt.Printf("ok fixture %s failed as required: %v\n", ent.Name(), err)
 	}
-	for _, name := range requiredM3Fixtures {
-		if !seen[name] {
-			fail("missing required fixture directory %s", name)
+	for _, fx := range requiredM3Fixtures {
+		if !seen[fx.name] {
+			fail("missing required fixture directory %s", fx.name)
 		}
 	}
 	fmt.Println("ok gitops semantic fixtures (all required M3 negatives failed)")
