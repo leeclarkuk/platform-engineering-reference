@@ -19,8 +19,8 @@ Out of scope until an explicit later ADR supersedes this one:
 * AI/MCP/autonomous remediation, model-written Terraform, or merge/deploy
   by an agent without a human
 
-The first developer interface is documentation plus, in a later milestone,
-a small CLI. Git remains the catalogue.
+The first developer interface is documentation plus the local `platform`
+CLI. Git remains the catalogue.
 
 ## Consequences
 
